@@ -790,6 +790,51 @@ uv run pytest           # offline unit tests
 Newest entries first. Each entry records the date, the milestone, what changed and why, files
 affected, and any effect on results. Future work is appended here as it is done.
 
+### 2026-10-31 — Milestone 05.0: dashboard data contract `abot-dashboard v1.0.0` (documentation only; uncommitted)
+
+**Why:** the M05 analytical dashboard needs a fixed, verified interface to the existing outputs so it
+communicates their meaning without re-deriving or oversimplifying it. The M05 discovery found the traps
+the contract must close:
+- cells cannot be summed to barangays (179 of 180 differ, up to 1,070.7 residents);
+- legacy layers remain in `abot_iloilo.gpkg`;
+- `citywide_a3.csv` mixes percentages and resident counts;
+- the coordinate systems are mixed;
+- `facilities.csv` lacks connection status;
+- component geometry exists for 9 fragments only.
+
+**Added**
+- `docs/DASHBOARD_DATA_CONTRACT.md`. It covers:
+  - authority rules R1–R14: the CSV and GeoPackage outputs are authoritative, no new calculation,
+    no cell→barangay aggregation, A3 primary, A1 comparative, A1 drive a separate mode,
+    local-only and uncertain access never merged into citywide access, null never zero;
+  - the indicator catalogue with numerator, denominator and the population each statistic describes;
+  - the `data_quality` schema with required statements;
+  - eight datasets (`manifest`, `city`, `barangays`, `barangay_indicators`, `cells`, `facilities`,
+    `network`, `provenance`) with sources, fields, types, units, nulls, CRS, transformations and
+    validation;
+  - geometry rules: EPSG:4326, 6 decimals, display simplification, bounding boxes never drawn as
+    networks;
+  - provenance and stale-bundle detection: commit SHA plus working-tree cleanliness;
+  - exporter checks V-*;
+  - limitations, unsupported indicators, 8 open questions, versioning.
+
+**Verified while authoring (read-only):**
+- the destination rule is role-level and reproduces `facility_inventory.n_destinations_connected`
+  for all 10 groups;
+- `n_<group>` counts any tier;
+- A1 barangay shares are rounded to 1 decimal, A3 shares to 2;
+- the A1 and A3 cell connection statuses differ (302 vs 263 cells not connected);
+- the duplicate-review identifiers match `fid_key`.
+
+**Files:** `docs/DASHBOARD_DATA_CONTRACT.md` (new), this file.
+
+**Effect on results:** none. No code, output, network, scenario or classification changed; no bundle
+generated.
+
+**Paper notes:** a dashboard is a presentation layer. State each indicator's denominator and the
+population its mean describes, and keep the primary (A3 walk), comparative (A1 walk), separate-mode
+(A1 drive) and evidence-only (A2, access taxonomy, gap evidence) roles visible.
+
 ### 2026-10-31 — Milestone 04: methodology review of the access taxonomy (uncommitted)
 
 **Why:** the approved M04 follow-up access classes conflated road function with access restriction.
