@@ -61,6 +61,18 @@ def main(argv: list[str] | None = None) -> None:
         help="write desk-validation evidence for the review items to <processed>/review/m03; "
         "reads the Overpass cache only and changes no data",
     )
+    sub.add_parser(
+        "components",
+        help="write walk-network component, approach-comparison and access-tag evidence to "
+        "<processed>/review/m04; reads the Overpass cache only and changes no data",
+    )
+    p_gap = sub.add_parser(
+        "fetch-gaps",
+        help="build and validate the Milestone 04 targeted Overpass query (dry run unless --allow-download)",
+    )
+    p_gap.add_argument(
+        "--allow-download", action="store_true", help="send the query once; snapshot to data/raw/osm_targeted/"
+    )
     p_aud = sub.add_parser(
         "audit", help="read-only check of inputs, outputs, staleness and consistency (PASS/WARN/FAIL)"
     )
@@ -105,3 +117,13 @@ def main(argv: list[str] | None = None) -> None:
         from abot import validation
 
         validation.build(s)
+    if args.command == "components":
+        from abot import components
+
+        components.build(s)
+    if args.command == "fetch-gaps":
+        from abot.fetch import targeted
+
+        result = targeted.fetch(s, allow_download=args.allow_download)
+        print(result["query"])
+        print(f"snapshot: {result.get('snapshot', 'none (dry run)')}")

@@ -89,6 +89,136 @@ deserve field verification. They are not suitable for allocating resources on th
   - walk: 93 pieces fetched; 97.1% of nodes kept (385 nodes, 52 km dropped)
   - drive: 28 pieces fetched; 97.0% of nodes kept (210 nodes, 36 km dropped)
 
+### 3.1 What the walk filter does and does not exclude (Milestone 04, observed)
+
+The osmnx 2.1.1 walk filter is
+`["highway"]["area"!~"yes"]["access"!~"private"]["highway"!~"abandoned|bus_guideway|construction|cycleway|motor|no|planned|platform|proposed|raceway|razed|rest_area|services"]["foot"!~"no"]["service"!~"private"]["sidewalk"!~"separate"]…`.
+Consequences:
+- `access=private`, `service=private`, `foot=no` and `highway=construction` ways are **never
+  downloaded**. The cache therefore cannot tell "missing from OSM" from "mapped but excluded".
+- `access=no`, `access=destination`, `access=customers` and `foot=private` ways **are** kept and
+  routed (main network: 5.3, 22.3, 0.9 and 0.8 km).
+- Access tags on **nodes** are ignored. The router passes through 703 gate-type nodes (171
+  `access=private`, 31 `access=no`, 275 untagged).
+
+**Four separate concepts (M04 methodology review).** They are never collapsed into one label:
+1. *Physical connectivity:* do mapped geometries share nodes (OSM topology)? This is a mapper's
+   claim, not a site observation. The router also assumes every mapped walk way is physically
+   traversable, although OSM rarely records surface, walls or whether a gate is open.
+2. *Mapped access status:* what `access`, `foot` (and `service=private`) say.
+3. *Public pedestrian status:* whether the general public may walk it, as far as the tags say.
+4. *Authorised-user access:* which group a restriction admits (residents, customers, employees,
+   visitors), as far as the tags **name** it.
+
+Physical connectivity never implies public access. Public access is never inferred from a missing
+tag or a missing gate. An authorised group is never inferred from the road class, a road name,
+nearby land use or facility proximity.
+
+**Access taxonomy (for analysis and reporting only; routing unchanged).** `abot.access.access_assessment`
+returns, for each way or gate node, `mapped_access_status`, `deciding_tag`, `public_pedestrian_status`,
+`authorized_group`, `field_verification_required` and `classification_reason`.
+
+| Status | Tags | Public pedestrian status | Authorised group |
+|---|---|---|---|
+| no | `access=no` without a pedestrian override; `foot=no` | prohibited | none_permitted |
+| private | `access=private`; `foot=private`; `service=private` without access/foot tags | not_public | unspecified: the tag names no group |
+| residents | `access=residents`; `foot=residents` | not_public | residents_named_by_tag |
+| customers | `access=customers` | customers_only (documented customer-access assumption) | customers_named_by_tag |
+| unknown | permit, delivery, unknown, other values | unknown: flag for review | unknown |
+| destination | `access=destination` | destination_only_assumed (entering to reach a destination, not through-walking) | destination_traffic |
+| pedestrian_override | `access` = private/residents/customers **and** a public `foot` value | permitted_by_foot_tag_conflicting: flagged, verify | the group named by `access` |
+| untagged | no access/foot tag | not_restricted_by_tags_unverified (OSM default for the highway class) | not_applicable |
+| public | `access`/`foot` = yes, designated, permissive, public, official | permitted_by_tag | not_applicable |
+
+**Precedence** (first match wins; tag order is irrelevant):
+1. `foot=*` decides for pedestrians. A public foot value with `access=no` or a vehicle category is
+   the standard pedestrian override: `public`, with the override recorded in the reason. A public
+   foot value with a group restriction (private, residents, customers) is a conflict:
+   `pedestrian_override`, never unrestricted public access.
+2. Otherwise `access=*`.
+3. Otherwise `service=private`, a road-function subtag implying private use.
+4. Otherwise untagged.
+
+**Rules that hold throughout:**
+- **The road class never changes the status.** `highway=service` describes function, so a private
+  service road is not a residents' road (the Iloilo Fishport roads are service roads in a port
+  compound). A `tertiary` road tagged `access=private` (Gustilo Street) is private, not uncertain.
+- **Permissive** access is mapped permission that the owner may withdraw. Mapped permission is not
+  independently verified real-world access.
+- **A simplified edge** takes its most restrictive way.
+- **A corridor or path** takes the most restrictive status of **any** way or gate on it.
+
+**Gates.** A mapped gate is evidence of a physical access-control point. It does not establish the
+operating rules (hours, pedestrian wicket, staffing), and `locked=*` is only quoted. A gate is
+assessed from its own tags:
+- Private gates are `private` / not_public and are flagged for review.
+- Untagged, destination, customers and unknown gates require field verification but are **not**
+  excluded.
+- A route **without** a mapped gate gains nothing from that: missing gate data is not evidence of
+  public access.
+
+The per-status counts (ways, edges, km, gate nodes, components, cells and residents whose active
+connection edge carries the status) are in `review/m04/access_classification_summary.csv`. The effect
+of removing each raw-tag restriction is in `review/m04/access_impact.csv`. Changing the routing
+default needs separate approval.
+
+The old labels `ineligible`, `resident_restricted`, `private_uncertain` and `uncertain` are retired.
+They inferred residents from `highway=service`, called an explicit `access=private` uncertain, and
+mixed prohibited with private. The old-to-new crosswalk and the verification that no component class,
+A3 output, population or travel time changed are in
+[MILESTONE_04_ACCESS_TAXONOMY.md](MILESTONE_04_ACCESS_TAXONOMY.md).
+
+**Public-access results vs authorised-user scenarios.** A1 and A3 describe access for the general
+public on the walk network. Access for an authorised group, for example F001 residents leaving
+through their own private Gustilo Street, would be a separate, named scenario with a stated user
+group, authorisation source, gate assumptions and bounds. It would never change public-access
+indicators. No such scenario is implemented.
+
+**Unresolved field verification:**
+- **F001:** the subdivision's links to the main network (Gustilo St, way/821331717) are physically
+  connected but `access=private`. Who is authorised, and how the gates operate, is unverified.
+- **F100 / F101:** the fishport service corridor is physically connected, but `access=private` with
+  private gates on every route. Pedestrian permissions are unverified, pending the operator's access
+  rules or documented field verification.
+
+### 3.2 Largest-component filter: alternatives evaluated (Milestone 04, not applied)
+
+The 3 km walk fetch has 112 weakly connected components (main: 14,918 nodes, 1,371.2 km). Each
+non-main component is classified by a desk rule, first match wins: separated by water; restricted
+access; access-uncertain; mapped dead end (`noexit=yes` at the gap); likely geometry error (≤ 2 m,
+not joined); isolated local network (≥ 0.5 km); small fragment. Three approaches were compared,
+all with the baseline connection and routing code and **without adding any link**:
+- **A1 (current):** largest component; a cell whose nearest way is on a fragment is joined to the
+  main network by a longer straight connector.
+- **A2:** all non-restricted components; cells and facilities attach to the nearest eligible edge.
+- **A3:** as A2, plus access-uncertain components; facilities also keep their main-network
+  connection; residents are network-connected, locally connected, access-uncertain or
+  unconnected; citywide indicators use network-connected residents; internal times are reported
+  separately and never count as citywide access.
+
+The rationale and results are in [MILESTONE_04_RESULTS.md](MILESTONE_04_RESULTS.md) §4–§6. A3 is
+the recommended *candidate* and is pending approval.
+
+### 3.3 Component-aware reporting layer (A3; approved M04 follow-up, additional to the baseline)
+
+The active baseline is unchanged and is labelled the **A1 optimistic connectivity scenario**:
+every cell within 250 m of the main network gets citywide times, also through a straight connector
+past an unlinked fragment. It is not a verified upper bound. `abot components` writes the A3 layer to
+`data/processed/component_aware/`, never into the baseline files, and checks the baseline file hashes
+before and after:
+1. Each cell is **network_connected**, **locally_connected** (on an eligible isolated component),
+   **access_uncertain** (on an access-uncertain component) or **unconnected**.
+2. Citywide walking indicators use network-connected residents only. Every share divides by **all**
+   residents of the barangay; nobody is dropped from a denominator.
+3. Internal accessibility exists only when the cell and a facility share an isolated component. It
+   is reported in separate columns (`*_internal`, `pop_local_internal_*`), with access-uncertain
+   residents kept apart (`pop_uncertain_internal_*`), and is **never** counted as citywide access.
+4. No link between components is created; F001 is not connected to the main network.
+5. Walking only. Drive indicators stay as in the baseline.
+Barangay counts and percentages: `barangay_access_a3.csv`. Citywide A1 vs A3: `citywide_a3.csv`.
+`abot audit` checks that the layer is newer than the last build, uses the same configuration, and was
+built with A1 reproducing the baseline.
+
 ### Drive speeds
 
 Speeds are **assumed free-flow urban speeds by road class**. They are analytical assumptions, not
@@ -397,7 +527,7 @@ and cell-level comparison of two runs.
 | Config | Purpose |
 |---|---|
 | `hist_buffer_1km.yaml` | Historical 1 km buffer; with the default (3 km) it is the current E7 comparison |
-| `e7_buffer_3km.yaml` | The original E7 run (now identical to the default) |
+| `e7_buffer_3km.yaml` | The original E7 run (now identical to the default). Its Milestone 02 outputs are archived with SHA-256 in `data/archive/hist_e7_buffer_3km_m02/` (Milestone 04). The originals were removed after verification in the M04 follow-up; the config is kept, and a rebuild would write new outputs with the current code |
 | `sens_maxspeed_override.yaml` | Attribution: the Milestone 01 speed rule (tagged maxspeed replaces the class speed) on the current baseline. Regenerated in Milestone 03; the stale 1 km outputs are archived in `data/archive/stale_sens_maxspeed_override_m02_1km/` |
 
 Built-in sensitivity: `accessibility.drive_network_time_factors: [1.5, 2.0]` multiplies the
@@ -417,6 +547,13 @@ deterministic (Milestone 02B fix).
 5. **Population within barangays is modelled.** Barangay totals are fixed at the 2020 census;
    POPCEN 2024 is not yet integrated. 27 barangays have `rel_population = low`.
 6. **Barrier data come from OSM.** Missing water features or missing paths affect connections in
-   both directions. Gates, fences, mangroves and flooding are not modelled.
+   both directions. Gates, fences, mangroves and flooding are not modelled. *Milestone 04:* gate
+   access tags are recorded (703 gates) but not used by the router, and `access=no` ways are routed
+   (§3.1).
 7. **Representative points** stand in for facility entrances.
 8. **Same-edge shortcuts** are handled for walking only.
+9. **Largest-component filter (Milestone 04).** 4,731.7 connected residents get citywide times only
+   through a straight connector past an unlinked fragment. The active baseline (A1) is therefore the
+   **optimistic connectivity scenario** (not a verified upper bound). The A3 reporting layer treats
+   them as locally connected, which is conservative for gated subdivisions whose real exit is
+   unmapped. Neither is observed (§3.2, §3.3).

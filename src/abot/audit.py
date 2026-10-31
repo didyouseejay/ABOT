@@ -365,6 +365,29 @@ class Audit:
                 "; ".join(problems) or "review/m03 generated after the last build, same configuration",
                 "re-run `abot validate`" if problems else "",
             )
+        a3_path = s.processed_dir / "component_aware" / "run_info.json"
+        if a3_path.exists() and "accessibility" in stamp:
+            info = json.loads(a3_path.read_text(encoding="utf-8"))
+            built = datetime.fromtimestamp(a3_path.stat().st_mtime).astimezone()
+            code = PROJECT_ROOT / "src" / "abot" / "components.py"
+            problems = [
+                *(["older than the last accessibility build"] if built < stamp["accessibility"] else []),
+                *(["built with another configuration"] if info.get("config_sha256") != s.config_sha256 else []),
+                *(
+                    ["components.py changed after the layer was built"]
+                    if code.exists() and datetime.fromtimestamp(code.stat().st_mtime).astimezone() > built
+                    else []
+                ),
+                *(["A1 did not reproduce the baseline"] if not info.get("a1_reproduces_baseline") else []),
+            ]
+            self.add(
+                sec,
+                "component_aware_layer_current",
+                WARN if problems else PASS,
+                "; ".join(problems)
+                or "A3 reporting layer built after the last build, same configuration, baseline unchanged",
+                "re-run `abot components`" if problems else "",
+            )
         if s.run_name is None:
             self.check_experiment_runs(sec)
 

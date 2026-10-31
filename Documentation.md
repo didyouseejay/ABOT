@@ -9,15 +9,20 @@ at the end**, newest first.
 - Repository: `abot` (Python package `abot`, v0.1.0)
 - Author: didyouseejay (carljohn.coopera@wvsu.edu.ph), West Visayas State University
 - Study area: Iloilo City, Iloilo, Western Visayas (Region VI), Philippines
-- Current state: **Milestone 03 implemented, uncommitted** (2026-10-31): desk validation of the
-  open review items (`abot validate`), regenerated speed-policy sensitivity, audit of experiment
-  runs. No review decision applied. Builds on Milestone 02B (commit `3e85764`: 3 km baseline,
-  census-anchored weights, reliability flags, `abot audit`, manual review files)
+- Current state: **Milestone 04 + follow-up, uncommitted** (2026-10-31): component-aware (A3)
+  walking reporting layer added next to the unchanged baseline (A1, the optimistic connectivity
+  scenario); access classification for reporting only; `e7_buffer_3km` originals removed after
+  verified archiving; 7 approved duplicate classifications recorded (7 pending). The targeted
+  Overpass snapshot was obtained: F001 and F100/F101 are linked to the main network in OSM only
+  through `access=private`, gated corridors (reviewed, nothing applied). The routing, the largest-component
+  baseline and the 250 m connector are unchanged. Builds on Milestone 03 (commit `8b464a4`) and 02B (commit `3e85764`: 3 km
+  baseline, census-anchored weights, reliability flags, `abot audit`, manual review files)
 - Detailed references: [docs/METHODOLOGY.md](docs/METHODOLOGY.md), [docs/DATA_DICTIONARY.md](docs/DATA_DICTIONARY.md),
   [docs/DATA_SOURCES.md](docs/DATA_SOURCES.md), [docs/MILESTONE_02_ANALYTICAL_AUDIT.md](docs/MILESTONE_02_ANALYTICAL_AUDIT.md),
   [docs/MILESTONE_02_VALIDITY_ASSESSMENT.md](docs/MILESTONE_02_VALIDITY_ASSESSMENT.md),
   [docs/MILESTONE_02_RESULTS.md](docs/MILESTONE_02_RESULTS.md), [docs/MILESTONE_02B_RESULTS.md](docs/MILESTONE_02B_RESULTS.md),
-  [docs/MILESTONE_03_RESULTS.md](docs/MILESTONE_03_RESULTS.md)
+  [docs/MILESTONE_03_RESULTS.md](docs/MILESTONE_03_RESULTS.md), [docs/MILESTONE_04_RESULTS.md](docs/MILESTONE_04_RESULTS.md),
+  [docs/MILESTONE_04_FOLLOWUP_RESULTS.md](docs/MILESTONE_04_FOLLOWUP_RESULTS.md)
 
 ---
 
@@ -166,7 +171,7 @@ You can run single build stages with `abot build --only population osm`.
 
 | Module | Responsibility |
 |---|---|
-| [src/abot/cli.py](src/abot/cli.py) | Command-line entry point (`fetch`, `build`, `report`, `all`, `compare`, `review`, `validate`, `audit`) |
+| [src/abot/cli.py](src/abot/cli.py) | Command-line entry point (`fetch`, `build`, `report`, `all`, `compare`, `review`, `validate`, `components`, `fetch-gaps`, `audit`) |
 | [src/abot/config.py](src/abot/config.py) | Loads [config/settings.yaml](config/settings.yaml), resolves data paths |
 | [src/abot/fetch/common.py](src/abot/fetch/common.py) | Streaming download in 1 MiB chunks, cache check, provenance manifest with SHA-256 |
 | [src/abot/fetch/sources.py](src/abot/fetch/sources.py) | Finds resources through the HDX CKAN API; WorldPop URL template |
@@ -178,13 +183,18 @@ You can run single build stages with `abot build --only population osm`.
 | [src/abot/report.py](src/abot/report.py) | Markdown QA report and folium interactive map |
 | [src/abot/compare.py](src/abot/compare.py) | Comparison of two runs (Milestone 02) |
 | [src/abot/reliability.py](src/abot/reliability.py) | Barangay reliability flags and the facility-inventory table (Milestone 02B) |
-| [src/abot/review.py](src/abot/review.py) | Manual-review files and maps (Milestone 02B) |
+| [src/abot/review.py](src/abot/review.py) | Manual-review files and maps (Milestone 02B); logged, reversible recording of approved duplicate decisions, and pair-checked carry-over (M04 follow-up) |
 | [src/abot/audit.py](src/abot/audit.py) | Read-only audit of inputs, outputs, staleness (including experiment runs) and consistency (Milestone 02B, 03) |
 | [src/abot/validation.py](src/abot/validation.py) | Desk evidence for duplicates, unconnected cells, network fragments and disconnected facilities (Milestone 03) |
 | [tests/test_core.py](tests/test_core.py) | Offline unit tests (Milestone 01) |
 | [tests/test_m02.py](tests/test_m02.py) | Offline regression tests for the Milestone 02 corrections |
 | [tests/test_m02b.py](tests/test_m02b.py) | Offline regression tests for Milestone 02B |
+| [src/abot/access.py](src/abot/access.py) | Pedestrian access taxonomy from OSM tags: mapped access status, public pedestrian status, authorised group, verification flag and reason per way or gate; shared by the component evidence and the snapshot corridor analysis (Milestone 04 methodology review; reporting only) |
+| [src/abot/components.py](src/abot/components.py) | Component inventory, network-approach comparison (A1/A2/A3), the A3 component-aware reporting layer (`data/processed/component_aware/`), access classification and access-tag impact, snapshot gap evidence, facility review summary (Milestone 04; never changes the baseline) |
+| [src/abot/archive.py](src/abot/archive.py) | Copy superseded outputs to `data/archive/` with a SHA-256 record, independent verification, and removal of originals only after verification (Milestone 04) |
+| [src/abot/fetch/targeted.py](src/abot/fetch/targeted.py) | Targeted Overpass query for the network gaps: build, validate, download only with `--allow-download`; snapshot evidence and link candidates (Milestone 04) |
 | [tests/test_m03.py](tests/test_m03.py) | Offline regression tests for Milestone 03 |
+| [tests/test_m04.py](tests/test_m04.py) | Offline regression tests for Milestone 04 |
 
 ### Outputs (`data/processed/`)
 
@@ -279,7 +289,19 @@ current (Milestone 02) method and notes what changed since Milestone 01. The ful
 2. Network types are osmnx `walk` and `drive`, with topology simplified.
 3. **Largest component only:** the largest weakly connected component is kept for walk and the
    largest strongly connected component for drive. Since Milestone 02, QA records what this removes
-   (walk 97.1% of nodes kept; drive 97.0%).
+   (walk 97.1% of nodes kept; drive 97.0%). *Milestone 04 (analysis only, not applied):* the 3 km walk
+   fetch has 112 components. A component-aware alternative (A3) would label 5,206 residents
+   "locally connected" (on an isolated component; internal times only) and 91.9 "access-uncertain";
+   4,731.7 of them now get citywide times through a straight connector. Retaining all components
+   with nearest-edge attachment (A2) would pull 9 citywide destinations (one hospital) onto campus
+   fragments. See [docs/MILESTONE_04_RESULTS.md](docs/MILESTONE_04_RESULTS.md) §5.
+   **Access tags:** the osmnx walk filter drops `access=private`, `service=private` and `foot=no`
+   ways before download, but keeps `access=no` (5.3 km in the main network), `destination`
+   (22.3 km) and `customers` (0.9 km). It ignores gate-node tags: the router passes 703 gates,
+   171 of them `access=private`. Impact per tag: M04 results §6. *M04 methodology review:* access
+   labels keep physical connectivity, mapped restriction, public pedestrian status and authorised
+   group apart; the road class never decides who may use a way, and `access=private` names no group
+   ([docs/MILESTONE_04_ACCESS_TAXONOMY.md](docs/MILESTONE_04_ACCESS_TAXONOMY.md); routing unchanged).
 4. **Walk travel time:** edge length / 4.5 km/h.
 5. **Drive travel time:** assumed free-flow speeds per road class (km/h), *including link roads*:
 
@@ -497,9 +519,10 @@ evacuation and transport are descriptive-only categories (see Section 8).
 | `rel_population` ok / caution / low | 102 / 51 / 27 |
 | `rel_network` ok / caution / low | 170 / 6 / 4 |
 | `rel_overall` ok / caution / low; ranking-eligible | 92 / 57 / 31; 149 |
-| `abot audit` (3 km baseline) | M02B: PASS 50, WARN 3, FAIL 0, INFO 11. M03 (with the experiment-run checks): PASS 54, WARN 4 (pending reviews, Guimaras facilities, stale `e7_buffer_3km`), FAIL 0, INFO 11 |
+| `abot audit` (3 km baseline) | M02B: PASS 50, WARN 3, FAIL 0, INFO 11. M03 (with the experiment-run checks): PASS 54, WARN 4 (pending reviews, Guimaras facilities, stale `e7_buffer_3km`), FAIL 0, INFO 11. M04: PASS 55 (new archive `hist_e7_buffer_3km_m02` verified), WARN 4, FAIL 0, INFO 11. M04 follow-up: PASS 57 (A3 layer current; review restore point verified), WARN 3 (`e7_buffer_3km` cleared; 7 duplicates still pending), FAIL 0, INFO 11 |
+| Determinism (M04 + follow-up) | `abot components` under `PYTHONHASHSEED` 0 and 12345: all 17 evidence files and the A3 CSVs byte-identical (A3 GeoPackage identical in content); A1 reproduces the saved baseline, and baseline file hashes are unchanged on every run |
 
-### Unit tests (103, offline, all passing; the 13 Milestone 01 tests are listed here, 40 Milestone 02 tests are in `tests/test_m02.py`, 32 Milestone 02B tests in `tests/test_m02b.py`, 18 Milestone 03 tests in `tests/test_m03.py`)
+### Unit tests (200, offline, all passing; the 13 Milestone 01 tests are listed here, 40 Milestone 02 tests are in `tests/test_m02.py`, 32 Milestone 02B tests in `tests/test_m02b.py`, 18 Milestone 03 tests in `tests/test_m03.py`, 97 Milestone 04 tests in `tests/test_m04.py`)
 
 - Conversion from old PSGC codes to COD-AB p-codes (3 cases).
 - Merging of OSM query tags (lists and "any value").
@@ -667,6 +690,34 @@ still be near one in a neighbouring barangay; the travel-time indicators account
      nearest mapped way and reach the main network by a longer straight connector (median 104 m).
      2,134 of them are in one 10.4 km subdivision in Tabuc Suba (La Paz) whose streets are 10.9 m
      from the main network (fragment F001; cause unverified).
+   - *Milestone 04 (cache evidence, nothing applied):* F001 has 4 dead ends within 20 m of
+     main-network streets, all tagged `noexit=yes`, and the main-network side of the 10.9 m gap is
+     `noexit=yes` too. Mappers marked these as deliberate dead ends, which argues against an
+     unmapped link there. The subdivision's entrance (possibly a private way the walk filter drops)
+     is **unverified**: the targeted Overpass snapshot was not obtained. *M04 follow-up:* the baseline
+     (A1) is labelled the **optimistic connectivity scenario** (not a verified upper bound). An
+     additional A3 reporting layer (`data/processed/component_aware/`) reports 5,206 residents as
+     locally connected and 91.9 as access-uncertain, with internal times kept apart from citywide
+     ones. Tabuc Suba (La Paz) is 43.5% locally connected, San Agustin 29.2%, Baybay Tanza 26.8%. The
+     A1 baseline is unchanged.
+   - *M04 snapshot review (observed, nothing applied):* the targeted snapshot shows that F001's
+     streets hang off **Gustilo Street**, a 1 km `access=private` tertiary road. Its southern end is a
+     `barrier=gate` + `access=private` node where the public Gustilo Street ends, and an 87 m private
+     way with no mapped gate links it northwards. F100/F101 reach the public fishport road only through
+     private fishport service roads ending at `access=private` gates (184 m / 579 m). They are
+     physically connected in OSM topology, but public pedestrian access is **restricted according to
+     mapped tags**. Whether F001's own residents use Gustilo Street as their exit is **unverified**, an
+     assumption pending a methodology decision
+     ([docs/MILESTONE_04_SNAPSHOT_REVIEW.md](docs/MILESTONE_04_SNAPSHOT_REVIEW.md)).
+   - *M04 methodology review:* `access=private` names no authorised group, so neither F001 residents
+     nor fishport neighbours are assumed authorised (`authorized_group=unspecified`). A resident-egress
+     scenario for F001 would be a separate authorised-user scenario with stated assumptions and bounds,
+     not a public-access result; it is documented, not implemented. Fishport pedestrian permissions
+     need the operator's access rules or documented field verification
+     ([docs/MILESTONE_04_ACCESS_TAXONOMY.md](docs/MILESTONE_04_ACCESS_TAXONOMY.md) §5).
+   - *Milestone 04:* gate nodes and `access=no` ways are routed through (the osmnx walk filter keeps
+     them). Removing them would change citywide ≤ 15 min shares by at most 0.75 pp, but would cut
+     12.6 (`access=no`) to 218.3 (all explicit restrictions) residents off the network.
 7. **Boundary definition.** 72.63 km² is the area of the COD-AB v03 polygon (land), not the official
    land area. The often-cited 78.34 km² has no reproducible geometry and is no longer used as a
    comparison (P4). There is an inland mismatch of about 2.6 km² with OSM on the northern boundary
@@ -691,6 +742,10 @@ against OSM (P4) and the connector radius × tolerance experiment (P3).
     are pending manual review (`review/possible_duplicates_review.csv`). *Milestone 03 desk
     assessment:* 2 are the same facility (D13, D14), 5 are distinct (bank and ATM), 6 are likely
     duplicates and 1 is uncertain. They affect facility counts only (≤ 41 m position shifts).
+    *Milestone 04:* the one approved lookup of BPI's branch directory for D10 returned HTTP 404
+    (inconclusive). *M04 follow-up (user-approved, logged, reversible):* D01, D02, D07, D08, D09
+    `distinct_keep_both`; D13, D14 `likely_duplicate_not_merged` (both records kept, no count changed);
+    D03–D06 and D10–D12 still pending.
 13. **External facilities.** 13 facilities in the 3 km buffer are not connected. All are on Guimaras,
     across the Iloilo Strait, and are never used as destinations (Milestone 03).
 
@@ -705,6 +760,8 @@ uv run abot build       # boundaries -> population -> osm -> accessibility
 uv run abot report      # qa_report.md and abot_map.html
 uv run abot review      # manual-review files (changes no data)
 uv run abot validate    # Milestone 03 desk evidence (Overpass cache only, changes no data)
+uv run abot components  # M04 component/access evidence + A3 reporting layer (cache only; baseline unchanged)
+uv run abot fetch-gaps  # Milestone 04 targeted query: dry run; --allow-download sends it once
 uv run abot audit       # read-only PASS / WARN / FAIL check of everything above
 uv run pytest           # offline unit tests
 ```
@@ -732,6 +789,187 @@ uv run pytest           # offline unit tests
 
 Newest entries first. Each entry records the date, the milestone, what changed and why, files
 affected, and any effect on results. Future work is appended here as it is done.
+
+### 2026-10-31 — Milestone 04: methodology review of the access taxonomy (uncommitted)
+
+**Why:** the approved M04 follow-up access classes conflated road function with access restriction.
+`access=private` became `resident_restricted` on `service` roads (so the fishport compound roads
+read as "residents and visitors"), and `private_uncertain` on other roads (so Gustilo Street,
+`tertiary` + `access=private`, read as "uncertain"). `ineligible` mixed prohibited with private,
+`access=customers` + `foot=permissive` became plain public, and the snapshot corridor rule needed
+**all** path ways to be restrictive. Physical connectivity, mapped restriction, public pedestrian
+access and authorised-user access must stay separate. Details:
+[docs/MILESTONE_04_ACCESS_TAXONOMY.md](docs/MILESTONE_04_ACCESS_TAXONOMY.md).
+
+**Added**
+- `src/abot/access.py`: `access_assessment` returns `mapped_access_status` (`no`, `private`,
+  `residents`, `customers`, `unknown`, `destination`, `pedestrian_override`, `untagged`, `public`),
+  `deciding_tag`, `public_pedestrian_status`, `authorized_group`, `field_verification_required` and
+  `classification_reason`.
+  - Precedence: `foot` decides. A public foot value with private/residents/customers is a flagged
+    conflict (`pedestrian_override`); with `access=no` it is a recorded override (`public`).
+  - `highway` never changes the status; permissive is documented as revocable.
+- Exact component-class check in `abot components` against the archived pre-review inventory (all
+  112 components; class plus rule inputs) → `review/m04/taxonomy_check.json`.
+- Archive `data/archive/review_m04_pre_access_taxonomy/` (`review/m04`, `component_aware`, and the
+  old-to-new crosswalk; 27 files, verified); `archive.archive_m04_pre_access_taxonomy`.
+- New evidence columns: gate table (`locked` and the assessment fields), restricted-way table,
+  per-status `public_pedestrian_status` and gate verification counts, corridor
+  `path_mapped_access_status` / `public_pedestrian_status` / `authorized_group` /
+  `classification_reason`, gap-table `snapshot_*` status columns.
+- 35 tests.
+
+**Changed:**
+- Snapshot corridors use the shared assessment, and the **any** rule on the path (ways and gates).
+  The legacy `public_pedestrian_access` column is kept.
+- Removal scenarios are defined on raw gate tags (`gate_tag_flags`) as before. Their numbers are
+  unchanged; only two definition texts were clarified.
+- `remaining_unverified` no longer names presumed user groups.
+- Old labels are retired; superseded notes were added to the follow-up results and the snapshot
+  review. The land-use refinement suggested there was not adopted.
+
+**Files:** `src/abot/access.py` (new), `src/abot/{components,archive}.py`, `src/abot/fetch/targeted.py`,
+`tests/test_m04.py`, `docs/METHODOLOGY.md` §3.1, `docs/MILESTONE_04_ACCESS_TAXONOMY.md` (new),
+`docs/MILESTONE_04_{FOLLOWUP_RESULTS,SNAPSHOT_REVIEW}.md` (notes), `docs/DATA_DICTIONARY.md` §10,
+this file.
+
+**Effect on results:** none on any number.
+- **Identical before and after:** walk-graph topology (15,376 nodes, 39,698 edges, 112 components:
+  fingerprint), all 112 component classes and rule inputs, A3 CSVs (byte-identical), the A3
+  GeoPackage (content), baseline hashes, population 457,626, facility travel times, and the
+  targeted snapshot (hashes match).
+- **Labels changed:** 52 ways `ineligible`→`no` (50) / `private` (2); 3 ways `public`→`pedestrian_override`
+  (0.12 km, main); 4 ways `uncertain`→`unknown`; 167 gates `private_uncertain`→`private`; 35 gates
+  `ineligible`→`no` (31) / `private` (4); 3 gates →`unknown`.
+- **Checks:** tests 165 → 200; audit PASS 57 / WARN 3 → PASS 58 / WARN 3 (the new archive verified).
+- F001, F100 and F101 stay physically connected in OSM topology, `private`, `not_public`, with an
+  unspecified authorised group, unapplied, and `locally_connected` in A3.
+
+**Paper notes:** report four kinds of evidence separately: physical connectivity (topology), mapped
+restriction (tags), public pedestrian access (tags, unverified on site) and authorised-user access
+(only when a tag names the group, or in an explicitly assumed scenario). A private service road is
+not a residents' road, and a tertiary road can be private. Neither a missing tag nor a missing gate
+is evidence of public access.
+
+### 2026-10-31 — Milestone 04: targeted Overpass candidate review and stale-documentation fix (uncommitted)
+
+**Why:** the user's single approved run of `abot fetch-gaps --allow-download` produced
+`data/raw/osm_targeted/m04_gaps_20261031T131445Z.json` (1,117 elements, OSM base
+2026-10-31T13:14:07Z, SHA-256 `12922cd2…`). The two generated link candidates needed a geometric and
+access review. The generated gap table and README still said the snapshot was "not obtained".
+
+**Added**
+- `targeted.corridor_analysis` → `review/m04/snapshot_corridor_analysis.csv`: for each candidate and
+  fragment, the contact nodes, the shortest route along candidate ways, gates on the route and the
+  corridor, exact access tags, and separate verdicts for physical connection (OSM topology), public
+  pedestrian access (mapped tags only) and field verification.
+- `docs/MILESTONE_04_SNAPSHOT_REVIEW.md`; 6 tests.
+
+**Fixed:** stale generated documentation. `gap_investigation()` ran before the snapshot was read
+and wrote a fixed "(not obtained)" sentence, and the README section was fixed as "cache evidence
+only". Now the snapshot is read first; the gap table separates `cache_*` measurements from `snapshot_*`
+evidence; the remaining-unverified text depends on the actual state; the README has a "Targeted
+snapshot evidence" section; and with no snapshot, stale snapshot tables are removed.
+
+**Findings [observed]:** F001 is linked in OSM topology through Gustilo Street (`access=private`,
+gated at the public road) and an 87 m private way with no mapped gate. F100/F101 are linked through
+private fishport service roads ending at private gates. Public pedestrian access is restricted
+according to mapped tags for all three, and field verification is needed. Component classes, A1/A2/A3
+and routing are unchanged.
+
+**Files:** `src/abot/components.py`, `src/abot/fetch/targeted.py`, `tests/test_m04.py`, docs.
+
+**Effect on results:** none. Before and after regeneration, the baseline, the A3 layer, the other
+evidence, the snapshot and the review CSVs are byte-identical. Only `gap_investigation.csv`,
+`snapshot_status.json` and the README changed, and `snapshot_corridor_analysis.csv` is new. Tests
+159 → 165.
+
+**Paper notes:** an OSM fragment that looks isolated can be a gated private subdivision whose access
+roads the routing profile removes. Report physical connectivity (topology), legal/public access (tags)
+and observed use (field) as three separate kinds of evidence.
+
+### 2026-10-31 — Milestone 04 follow-up: approved decisions implemented (uncommitted)
+
+**Why:** the user approved the A3 component-aware layer as an additional reporting layer, an access
+classification for reporting only, removal of the verified `e7_buffer_3km` originals, and 7 duplicate
+classifications. Details: [docs/MILESTONE_04_FOLLOWUP_RESULTS.md](docs/MILESTONE_04_FOLLOWUP_RESULTS.md).
+
+**Added**
+- A3 reporting layer in `data/processed/component_aware/` (cells, barangay counts and percentages,
+  citywide A1 vs A3, GeoPackage). Citywide indicators use main-network residents only, internal
+  accessibility is kept in separate columns, and access-uncertain residents are kept apart. Baseline
+  file hashes are checked before and after; A1 is labelled the optimistic connectivity scenario.
+- Access classes revised to the approved scheme (`foot=private` ineligible; `access=private`
+  resident-restricted or uncertain by context; private gates flagged; untagged gates not excluded),
+  with a per-class summary of ways, edges, km, gate nodes, components, cells and residents.
+- Snapshot evidence analysis (`targeted.snapshot_evidence`): runs automatically once the user's
+  approved `fetch-gaps --allow-download` has produced a snapshot. Link candidates are never applied.
+- `archive.remove_verified_originals`; `review.record_duplicate_decisions` /
+  `revert_duplicate_decision` with `review/review_decisions_log.csv`; restore point
+  `data/archive/review_pre_m04_decisions/`; audit check `component_aware_layer_current`.
+
+**Changed / Fixed**
+- `review._keep_reviewer_columns`: a duplicate decision is carried over only while the same two OSM
+  records form the pair. Before this fix, positional ids could move a decision to another pair after an
+  OSM update.
+- `facility_review_summary` reads the live reviewer columns.
+
+**Removed:** `data/interim/e7_buffer_3km/`, `data/processed/e7_buffer_3km/`,
+`data/processed/comparisons/e7_buffer_1km_vs_3km/` (20 files), after hash verification. They are
+archived in `data/archive/hist_e7_buffer_3km_m02/` (21/21 verified after removal); the config is kept.
+
+**Files:** `src/abot/{components,archive,review,audit}.py`, `src/abot/fetch/targeted.py`,
+`tests/test_m04.py`, `data/processed/review/README.md` (decision note), docs.
+
+**Effect on results:** active baseline **none** (hash-checked). Reporting layer (A3, walking):
+main-network connected 98.08%, locally connected 1.14%, access-uncertain 0.02%, unconnected 0.76%
+(A1: 99.13% connected, 0.87% unconnected); hospital ≤ 15 min 22.90% (A1) vs 22.64% (A3). Duplicate
+review: 14 → 7 pending; no facility count changed. Tests 138 → 159; audit PASS 55 / WARN 4 → PASS 57 / WARN 3.
+
+**Paper notes:** report A1 as the optimistic connectivity scenario and A3 as the component-aware
+scenario. Present them side by side, and keep internal (within a gated or isolated network)
+accessibility distinct from citywide access. Distinguish physical traversability, public access and
+resident-restricted access when interpreting OSM access tags.
+
+### 2026-10-31 — Milestone 04: network connectivity investigation (read-only; uncommitted)
+
+**Why:** Milestone 03 showed that the largest-component filter drops a 10.4 km Tabuc Suba
+subdivision (F001) 10.9 m from the main network, and that 4,812 connected residents reach the
+network only by a longer straight connector. This milestone asks whether the component policy and
+OSM access handling are appropriate, before changing anything.
+
+**Added**
+- `abot components` (`src/abot/components.py`): inventory and classes of all 112 walk components;
+  comparison of A1 (current), A2 (all eligible components) and A3 (component-aware: network-connected
+  / locally connected / access-uncertain / unconnected, with internal times kept apart); way and
+  gate-node access classes; removal impact per restriction tag; F001/F100/F101 cache evidence; facility
+  review summary. Writes `data/processed/review/m04/`.
+- `abot fetch-gaps` (`src/abot/fetch/targeted.py`): the approved targeted Overpass query (3 gap
+  corridors at 50 m plus the F001 box at +50 m; every highway way with no access filter, plus barriers,
+  entrances, bridges and `noexit`). Validated statically; downloads only with `--allow-download`,
+  into `data/raw/osm_targeted/`, never into `osm_cache/`.
+- `src/abot/archive.py` and the archive `data/archive/hist_e7_buffer_3km_m02/` (21 files, SHA-256
+  verified three ways; originals kept).
+- `tests/test_m04.py` (35 tests); `docs/MILESTONE_04_RESULTS.md`, `docs/MILESTONE_04_AUDIT.md`.
+
+**Not obtained:** the Overpass snapshot (the server closed the single approved request; nothing
+saved) and the D10 BPI directory (HTTP 404).
+
+**Files:** `src/abot/{components,archive}.py`, `src/abot/fetch/targeted.py`, `src/abot/cli.py`,
+`tests/test_m04.py`, docs.
+
+**Effect on results:** none. The baseline, 1 km historical and speed-sensitivity outputs were not
+rebuilt, and no review decision was entered. Scenario figures (not applied): A3 network-connected
+453,656.9 → 448,855.8, locally connected 5,206.0, access-uncertain 91.9, unconnected 3,969.1 →
+3,472.3; citywide hospital ≤ 15 min walk 22.90% → 22.64%. Tests 103 → 138; audit PASS 54 → 55, WARN 4,
+FAIL 0.
+
+**Paper notes:** the largest-component filter has two opposite failure modes. It overstates access
+by giving citywide times through a straight connector, which at F001 runs to points mapped as
+`noexit`. Retaining all fragments with nearest-edge attachment understates access, because hospitals
+and campuses get attached to their internal path fragments. A component-aware classification that
+keeps internal and citywide access separate avoids both and makes the uncertainty explicit. OSM
+`noexit=yes` is useful evidence that a gap is deliberate.
 
 ### 2026-10-31 — Milestone 03: manual spatial validation and analytical finalization (uncommitted)
 

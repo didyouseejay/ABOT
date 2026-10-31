@@ -210,5 +210,5 @@ Nothing here is applied to the analysis. Reviewer columns `review_status` (`pend
 `data/archive/m01_3edc0dd/` holds a byte-for-byte copy of the Milestone 01 processed outputs, QA
 JSON and graphs (commit `3edc0dd`). It is the fixed baseline for comparisons.
 `data/archive/m02_wip_1km_20261031/` holds the uncommitted Milestone 02 1 km outputs, copied before
-the M02B rebuild. `data/archive/<name>.sha256.json` records the SHA-256 of every archived file;
+the M02B rebuild. `data/archive/review_m04_pre_access_taxonomy/` holds `review/m04/` and `component_aware/` as built with the pre-review access labels, plus `crosswalk/access_taxonomy_crosswalk.csv` (old class to new status for every cached walk way and gate node); its `review_m04/component_inventory.csv` is the reference for the exact component-class check in `abot components` (`review/m04/taxonomy_check.json`). `data/archive/<name>.sha256.json` records the SHA-256 of every archived file;
 `abot audit` fails if one changes.
