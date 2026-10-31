@@ -1,5 +1,6 @@
-# ABOT Milestone 01 configuration — Iloilo City, Philippines.
-# Paths are relative to the project root.
+# ABOT configuration — Iloilo City, Philippines.
+# Paths are relative to the project root. Experiment configs (config/experiments/) start with
+# `extends: ../settings.yaml` and override only what they change.
 
 city:
   name: Iloilo City
@@ -12,6 +13,7 @@ crs:
 
 paths:
   data_dir: data               # raw/, interim/, processed/ are created beneath this
+  run_name: null               # set in experiment configs: interim/<run_name>, processed/<run_name>
 
 sources:
   cod_ab:                      # OCHA COD-AB, CC BY-IGO
@@ -19,50 +21,170 @@ sources:
     resource_name: phl_admin_boundaries.gdb.zip
   census_2020:                 # PSA 2020 census by barangay via HDX, CC BY
     hdx_dataset: popn-single-year-age-sex-and-barangay-census-2020
-  worldpop:                    # WorldPop Global2 R2025A constrained 100 m, CC BY 4.0
+  worldpop:                    # WorldPop Global2 R2025A constrained 100 m (alpha release), CC BY 4.0
     url_template: "https://data.worldpop.org/GIS/Population/Global_2015_2030/R2025A/{year}/PHL/v1/100m/constrained/phl_pop_{year}_CN_100m_R2025A_v1.tif"
-    years: [2026, 2020]        # 2026 = main analysis year; 2020 = validated against the census
-    analysis_year: 2026
+    years: [2020, 2026]        # 2020 = within-barangay pattern for census anchoring; 2026 = projection (sensitivity)
+
+# Population weights (validity assessment P1, P2). Every 100 m cell is split between the barangays
+# it overlaps in proportion to area (fractional allocation); the pieces carry the cell's travel time.
+# Original WorldPop estimates are always kept next to the adjusted values (pop_wp2020, pop_wp2026,
+# pop_census2020_adj); `pop` is a copy of the primary weight below.
+#   census_2020_anchored  PSA 2020 barangay totals x WorldPop 2020 within-barangay pattern (default).
+#                         The census is an INPUT of WorldPop for the Philippines, so agreement with it
+#                         is never evidence of accuracy.
+#   worldpop_2026         unadjusted WorldPop 2026 projection (Milestone 01/02 weights; sensitivity)
+#   worldpop_2020         unadjusted WorldPop 2020 modelled estimate
+population:
+  primary_weight: census_2020_anchored
 
 osm:                           # OpenStreetMap via Overpass (osmnx), ODbL 1.0
   network_types: [walk, drive]
-  boundary_buffer_m: 1000      # fetch slightly beyond the city so edge trips are not cut off
+  # OSM extraction buffer around the city (networks, barriers, facilities). 3000 m since Milestone 02B
+  # (Experiment E7: 1 km understated access for border barangays). The Milestone 01 / M02 value,
+  # 1000 m, is preserved in config/experiments/hist_buffer_1km.yaml. Population cells and every
+  # indicator stay restricted to Iloilo City; facilities in the buffer are destinations only when
+  # they have a valid network connection.
+  boundary_buffer_m: 3000
+  # Features that a straight origin/facility connector must not cross (see accessibility.connection).
+  # Polygons are treated as water areas, lines as watercourses / coastline, by geometry type.
+  barriers:
+    hard:
+      natural: [water, coastline]          # natural=water includes water=fishpond, river areas
+      landuse: [aquaculture, reservoir, basin]
+      waterway: [river, canal, stream, riverbank]   # lines tagged tunnel=culvert/yes are not barriers
+    soft:                                  # recorded as a flag only: gates are not mapped reliably
+      barrier: [wall]
 
-# Facility categories. Each maps to OSM tags; a feature matches if ANY tag/value matches.
-# `true` means "any value of this key".
+# Facility categories (the nine Milestone 01 categories). For each category:
+#   tags     a feature belongs to the category if ANY tag/value matches (`true` = any value).
+#            Multi-valued tags such as `doctor;dentist` are split on ";".
+#   regex    optional: also belongs if a tag matches the regular expression.
+#   exclude  optional: never belongs if one of these tag/values matches.
+#   subtypes ordered rules, first match wins. A rule matches when every `all` condition holds and,
+#            if `any` or `regex` is given, at least one of them hits. A rule with no conditions is a
+#            fallback. Each subtype has a reporting tier:
+#              indicative   travel-time indicators are computed ("access to MAPPED facilities")
+#              descriptive  mapped and counted only; no travel-time statistics
+#              excluded     recorded but never used as a destination for this category
+#            `status` records how the subtype was decided (default: tag_rule).
+# A feature may belong to several categories; `category_priority` only picks its primary
+# category for display and de-duplication.
 facilities:
-  health:
-    amenity: [hospital, clinic, doctors, dentist]
-    healthcare: true
   pharmacy:
-    amenity: [pharmacy]
-    shop: [chemist]
-  education:
-    amenity: [kindergarten, school, college, university]
-  safety:
-    amenity: [police, fire_station]
-  government:
-    amenity: [townhall]
-    office: [government]
-  market:
-    amenity: [marketplace]
-    shop: [supermarket]
-  finance:
-    amenity: [bank, atm]
-  transport:
-    amenity: [bus_station, ferry_terminal]
-  evacuation:                  # known to be very sparse in OSM — reported, not trusted
-    emergency: [assembly_point]
-    social_facility: [shelter]
+    tags: {amenity: [pharmacy], shop: [chemist], healthcare: [pharmacy]}
+    subtypes:
+      - {subtype: pharmacy, tier: indicative, any: {amenity: [pharmacy], healthcare: [pharmacy]}}
+      - {subtype: chemist_only, tier: descriptive, status: ambiguous, any: {shop: [chemist]},
+         note: "shop=chemist only: drugstore/toiletries shop that may not dispense medicines"}
 
-# Matching precedence when a feature fits several categories (first wins).
-# pharmacy precedes health so that healthcare=pharmacy is not counted as a health facility.
+  health:
+    tags:
+      amenity: [hospital, clinic, doctors, dentist, health_post, veterinary]
+      healthcare: true
+    exclude: {healthcare: [pharmacy]}        # pharmacies are their own category
+    subtypes:
+      - {subtype: veterinary, tier: excluded, any: {amenity: [veterinary], healthcare: [veterinary]},
+         note: "veterinary facility: not a human health service"}
+      - {subtype: veterinary, tier: excluded, status: reclassified_by_name,
+         # "animal" is deliberately absent: Animal Bite Treatment Centres are human (rabies) clinics.
+         regex: {name: "(?i)\\b(pet|pets|veterinar\\w*|vet clinic)\\b"},
+         note: "tagged as a human health facility, but the OSM name indicates a veterinary facility"}
+      - {subtype: hospital, tier: indicative, any: {amenity: [hospital], healthcare: [hospital]}}
+      - subtype: primary_care
+        tier: indicative
+        any:
+          amenity: [clinic, doctors, health_post]
+          healthcare: [clinic, doctor, centre, community_health_worker, health_aide, midwife, birthing_centre, nurse]
+      - {subtype: dental, tier: descriptive, any: {amenity: [dentist], healthcare: [dentist]}}
+      - {subtype: other_health, tier: descriptive,
+         note: "specialist or support service (laboratory, therapy, optometry, dialysis, ...)"}
+
+  education:
+    tags: {amenity: [kindergarten, school, college, university]}
+    subtypes:
+      - {subtype: higher_education, tier: indicative, any: {amenity: [college, university]}}
+      - {subtype: school_public, tier: indicative, all: {amenity: [school]},
+         any: {"operator:type": [public, government]},
+         regex: {operator: "(?i)deped|department of education"}}
+      - {subtype: school_private, tier: indicative, all: {amenity: [school]},
+         any: {"operator:type": [private, religious, ngo, community]}}
+      - {subtype: school_ownership_unknown, tier: indicative, status: attribute_missing,
+         all: {amenity: [school]}, note: "school ownership (operator:type / operator) not tagged"}
+      - {subtype: kindergarten, tier: indicative, any: {amenity: [kindergarten]}}
+
+  safety:
+    tags: {amenity: [police, fire_station]}
+    subtypes:
+      - {subtype: police, tier: indicative, any: {amenity: [police]}}
+      - {subtype: fire_station, tier: indicative, any: {amenity: [fire_station]}}
+
+  government:
+    tags: {amenity: [townhall], office: [government]}
+    subtypes:
+      - {subtype: barangay, tier: descriptive,
+         any: {"townhall:type": [barangay, village], admin_level: ["10"]},
+         regex: {name: "(?i)barangay|pambarangay|\\bbrgy\\b"}}
+      - {subtype: city_government, tier: descriptive,
+         any: {"townhall:type": [city], admin_level: ["6"]},
+         regex: {name: "(?i)city hall|^iloilo city (government|disaster|planning|health|engineer|treasur|assessor)"}}
+      - {subtype: provincial_government, tier: descriptive, any: {admin_level: ["4"]},
+         regex: {name: "(?i)provincial|province of iloilo|capitol"}}
+      - {subtype: other_government_office, tier: descriptive, status: level_not_tagged,
+         note: "government level not tagged in OSM; by name mostly regional/national agency offices (not verified)"}
+
+  market:
+    tags: {amenity: [marketplace], shop: [supermarket]}
+    subtypes:
+      - {subtype: public_market, tier: indicative, any: {amenity: [marketplace]}}
+      - {subtype: supermarket, tier: indicative, any: {shop: [supermarket]}}
+
+  finance:
+    tags: {amenity: [bank, atm, money_transfer, bureau_de_change, payment_centre]}
+    subtypes:
+      - {subtype: bank, tier: indicative, any: {amenity: [bank]}}
+      - {subtype: atm, tier: descriptive, any: {amenity: [atm]}, note: "an ATM is not a bank branch"}
+      - {subtype: other_finance, tier: descriptive}
+
+  transport:                   # descriptive only: jeepney routes/stops (the main mode) are not mapped as destinations
+    tags: {amenity: [bus_station, ferry_terminal]}
+    subtypes:
+      - {subtype: land_terminal, tier: descriptive, any: {amenity: [bus_station]}}
+      - {subtype: ferry_terminal, tier: descriptive, any: {amenity: [ferry_terminal]}}
+
+  evacuation:                  # descriptive only until reconciled with the official CDRRMO inventory
+    tags: {emergency: [assembly_point], social_facility: [shelter]}
+    regex: {name: "(?i)evacuat", description: "(?i)evacuat"}
+    subtypes:
+      - {subtype: named_evacuation_centre, tier: descriptive, status: osm_name_only,
+         any: {"social_facility:for": [displaced]},
+         regex: {name: "(?i)evacuat", description: "(?i)evacuat"},
+         note: "named or described as an evacuation centre in OSM; NOT verified as an official evacuation centre"}
+      - {subtype: assembly_point, tier: descriptive, any: {emergency: [assembly_point]},
+         note: "OSM assembly point: usually a site/building evacuation gathering point"}
+      - {subtype: other_emergency_location, tier: descriptive}
+
+# Primary category when a feature matches several (display and de-duplication only).
 category_priority: [pharmacy, health, education, safety, government, market, finance, transport, evacuation]
 
+# Destinations for which travel-time indicators are computed. Only `indicative` subtypes may be
+# listed; the column prefix is the group name (e.g. walk_health_hospital_mean_min).
+indicator_groups:
+  health_hospital:     {category: health, subtypes: [hospital]}
+  health_primary_care: {category: health, subtypes: [primary_care]}
+  pharmacy:            {category: pharmacy, subtypes: [pharmacy]}
+  education_basic:     {category: education, subtypes: [school_public, school_private, school_ownership_unknown, kindergarten]}
+  education_higher:    {category: education, subtypes: [higher_education]}
+  safety_police:       {category: safety, subtypes: [police]}
+  safety_fire:         {category: safety, subtypes: [fire_station]}
+  market_public:       {category: market, subtypes: [public_market]}
+  market_supermarket:  {category: market, subtypes: [supermarket]}
+  finance_bank:        {category: finance, subtypes: [bank]}
+
 accessibility:
-  walk_speed_kmh: 4.5
-  # Assumed free-flow urban speeds for roads without a maxspeed tag (most of Iloilo).
-  # No congestion model in Milestone 01 — treat drive times as optimistic.
+  walk_speed_kmh: 4.5          # ≈1.25 m/s, a typical comfortable adult walking speed (see docs/METHODOLOGY.md)
+  # Assumed free-flow urban speeds by OSM highway class (km/h). These are analytical assumptions,
+  # not measured speeds. Results are "modelled uncongested car travel time": no congestion, signals,
+  # turns, parking or car availability, so drive times are optimistic lower bounds.
   drive_speeds_kmh:
     motorway: 60
     trunk: 40
@@ -72,8 +194,59 @@ accessibility:
     unclassified: 20
     residential: 20
     living_street: 10
-    service: 15
-  snap_speed_kmh: 4.5          # off-network leg (cell centre -> nearest node) is walked in both modes
+    motorway_link: 40
+    trunk_link: 30
+    primary_link: 25
+    secondary_link: 20
+    tertiary_link: 20
+    road: 20
+  drive_speed_fallback_kmh: 20 # highway classes not listed above (counted in QA)
+  # How a tagged OSM maxspeed is used:
+  #   cap       (default) maxspeed can only LOWER the configured speed. A legal limit is an upper
+  #             bound on speed, not a typical urban speed, so it must not raise the assumption.
+  #   ignore    maxspeed is not used.
+  #   override  maxspeed replaces the configured speed (Milestone 01 behaviour, via osmnx).
+  maxspeed_policy: cap
+  # How population cells and facilities are attached to the network. A straight connector runs
+  # from the point to the nearest walkable edge (not node); the nearest edge whose connector does
+  # not cross a hard barrier is used. Points with no acceptable edge within max_connector_m are
+  # flagged "not connected" and receive no travel time.
+  connection:
+    max_connector_m: 250       # origins: ≈2.5 cell widths; beyond this the cell has no mapped path nearby
+    # Facilities exist with more certainty than a modelled population cell: dropping a mapped
+    # school because its access path is unmapped would create a false gap. They get a wider
+    # tolerance; connectors longer than max_connector_m are kept but flagged in QA.
+    facility_max_connector_m: 500
+    max_candidates: 12         # nearest edges examined per point
+    origin_radius_m: 50        # ≈half a 92 m cell: crossings this close to a cell centre are ignored
+    facility_radius_m: 0
+    water_crossing_tolerance_m: 20
+    drive_access_flag_m: 500   # walking distance from home to the drive network that is flagged as long
+    report_connector_thresholds_m: [150, 250, 400]
   thresholds_min:
     walk: [10, 15, 30]
     drive: [5, 10, 15]
+  # Network-speed sensitivity for modelled uncongested car travel time (validity assessment P5): the
+  # drive-network leg is multiplied by each factor; walking legs to and from the road stay unchanged.
+  # Illustrative only: the factors are not calibrated congestion levels.
+  drive_network_time_factors: [1.5, 2.0]
+
+# Barangay reliability flags (validity assessment P2, P3). Each dimension is reported separately with
+# its measured values and the reasons for its level; there is deliberately no combined score.
+# Levels: ok | caution | low. See docs/METHODOLOGY.md section 8.
+reliability:
+  population:                  # reliability of barangay population totals and population-based quantities
+    low_max_centre_cells: 5    # barangays with <= 5 cell centres: totals depend on the allocation rule by 15-26%
+    caution_max_centre_cells: 10
+    # Census anchoring factor (census 2020 / WorldPop 2020): far from 1 means WorldPop's input units
+    # do not match the barangay, so its within-barangay pattern is also less certain.
+    caution_anchor_factor_outside: [0.5, 2.0]
+  network:                     # share of residents with no valid walk-network connection
+    low_pct_not_connected: 5   # their indicators describe only the connected residents
+    caution_pct_not_connected: 1
+  # Barangays examined first in the unconnected-cell review (validity assessment section 2).
+  review_priority_barangays:
+    PH0603022030: Calahunan
+    PH0603022067: Hibao-an Sur
+    PH0603022201: Tabuc Suba (La Paz)
+    PH0603022017: Baybay Tanza

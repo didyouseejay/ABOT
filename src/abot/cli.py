@@ -1,9 +1,11 @@
-"""Command-line entry point: `abot fetch | build | report | all`."""
+"""Command-line entry point: `abot fetch | build | report | all | compare | review | audit`."""
 
 from __future__ import annotations
 
 import argparse
 import logging
+import sys
+from pathlib import Path
 
 from abot.config import DEFAULT_CONFIG, load_settings
 
@@ -31,7 +33,7 @@ def _build(s, stages: list[str]) -> None:
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(prog="abot", description="ABOT Milestone 01 pipeline")
+    parser = argparse.ArgumentParser(prog="abot", description="ABOT accessibility pipeline")
     parser.add_argument("--config", default=DEFAULT_CONFIG, help="path to settings.yaml")
     parser.add_argument("-v", "--verbose", action="store_true")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -45,12 +47,35 @@ def main(argv: list[str] | None = None) -> None:
     sub.add_parser("report", help="write the QA report and HTML map")
     sub.add_parser("all", help="fetch + build + report")
 
+    p_cmp = sub.add_parser("compare", help="compare two processed-output directories")
+    p_cmp.add_argument("base", type=Path, help="e.g. data/archive/m01_3edc0dd")
+    p_cmp.add_argument("variant", type=Path, help="e.g. data/processed")
+    p_cmp.add_argument("--name", help="output folder under data/processed/comparisons/")
+
+    sub.add_parser(
+        "review",
+        help="write manual-review files (duplicates, unconnected cells) to <processed>/review; changes no data",
+    )
+    p_aud = sub.add_parser(
+        "audit", help="read-only check of inputs, outputs, staleness and consistency (PASS/WARN/FAIL)"
+    )
+    p_aud.add_argument("--output", type=Path, help="also write the findings as Markdown (outside data/)")
+    p_aud.add_argument(
+        "--skip-hashes", action="store_true", help="skip SHA-256 checks of raw and archived files"
+    )
+
     args = parser.parse_args(argv)
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.INFO,
         format="%(asctime)s %(levelname)-7s %(name)s: %(message)s",
         datefmt="%H:%M:%S",
     )
+    if args.command == "audit":
+        from abot import audit
+
+        # Read-only: no directory is created, nothing under data/ is written.
+        s = load_settings(args.config, create_dirs=False)
+        sys.exit(audit.run(s, Path(args.config), args.output, hashes=not args.skip_hashes))
     s = load_settings(args.config)
 
     if args.command in ("fetch", "all"):
@@ -63,3 +88,11 @@ def main(argv: list[str] | None = None) -> None:
         from abot import report
 
         report.build(s)
+    if args.command == "compare":
+        from abot import compare
+
+        compare.run(s, args.base, args.variant, args.name)
+    if args.command == "review":
+        from abot import review
+
+        review.build(s)

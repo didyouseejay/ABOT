@@ -1,0 +1,14 @@
+# Attribution run (Milestone 02): baseline methodology, but with the Milestone 01 speed rule where
+# a tagged OSM maxspeed REPLACES the configured class speed. Isolates the effect of the speed-policy
+# correction on drive times. Inherits the default buffer (3 km since Milestone 02B; the existing
+# outputs of this run were built with 1 km and are stale until it is re-run). Cached, no download.
+#
+#   uv run abot --config config/experiments/sens_maxspeed_override.yaml build
+#   uv run abot compare data/processed/sens_maxspeed_override data/processed --name speed_override_vs_cap
+extends: ../settings.yaml
+
+paths:
+  run_name: sens_maxspeed_override
+
+accessibility:
+  maxspeed_policy: override

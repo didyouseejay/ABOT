@@ -1,0 +1,20 @@
+# Historical baseline buffer (Milestone 02B): the 1 km OSM extraction buffer used by Milestone 01
+# (commit 3edc0dd) and by the Milestone 02 baseline. Since Milestone 02B the default is 3 km
+# (config/settings.yaml). Everything else follows the current methodology, so comparing this run
+# with the default isolates the buffer effect (Experiment E7). It reads the cached 1 km Overpass
+# responses; no new download is needed.
+#
+# The Milestone 01 outputs themselves are frozen in data/archive/m01_3edc0dd/ (exact M01 code:
+# git commit 3edc0dd). This config never writes there: its outputs go to
+# data/interim/hist_buffer_1km and data/processed/hist_buffer_1km.
+#
+#   uv run abot --config config/experiments/hist_buffer_1km.yaml build
+#   uv run abot --config config/experiments/hist_buffer_1km.yaml report
+#   uv run abot compare data/processed/hist_buffer_1km data/processed --name e7_buffer_1km_vs_3km_m02b
+extends: ../settings.yaml
+
+paths:
+  run_name: hist_buffer_1km
+
+osm:
+  boundary_buffer_m: 1000

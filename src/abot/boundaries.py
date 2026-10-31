@@ -74,7 +74,8 @@ def build(s: Settings) -> None:
         "city_area_km2": qa.check(
             None,
             round(city_area, 2),
-            "official figure is ~78 km2 (unverified); coastline differences expected",
+            "area of the COD-AB v03 polygon (land), not the official land area; the often-cited "
+            "78.34 km2 has no reproducible geometry and is not used as a comparison",
         ),
         "barangay_union_vs_city_pct": qa.check(
             abs(union_area - city_area) / city_area < 0.01,
@@ -89,4 +90,5 @@ def build(s: Settings) -> None:
 
     city.to_file(s.gpkg, layer="city", driver="GPKG")
     brgy.to_file(s.gpkg, layer="barangays", driver="GPKG")
+    qa.record_stage(s, "boundaries")
     log.info("wrote city + %d barangays to %s", len(brgy), s.gpkg.name)

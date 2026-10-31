@@ -1,0 +1,18 @@
+# Experiment E7 (Milestone 02): does the OSM extraction buffer change the accessibility results?
+# Since Milestone 02B, 3 km IS the default (config/settings.yaml), so this file only reproduces the
+# original E7 run. The current E7 comparison is hist_buffer_1km.yaml vs the default.
+# Identical to the baseline except for the buffer around the city used to fetch the walk/drive
+# networks, barrier features and facilities. Population cells and barangay aggregation stay
+# restricted to Iloilo City. Outputs go to data/interim/e7_buffer_3km and
+# data/processed/e7_buffer_3km; data/raw is shared and only gains new Overpass cache files.
+#
+#   uv run abot --config config/experiments/e7_buffer_3km.yaml build
+#   uv run abot --config config/experiments/e7_buffer_3km.yaml report
+#   uv run abot compare data/processed data/processed/e7_buffer_3km --name e7_buffer_1km_vs_3km
+extends: ../settings.yaml
+
+paths:
+  run_name: e7_buffer_3km
+
+osm:
+  boundary_buffer_m: 3000
