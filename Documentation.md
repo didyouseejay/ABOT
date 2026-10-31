@@ -656,8 +656,9 @@ still be near one in a neighbouring barangay; the travel-time indicators account
      `review/unconnected_cells_review.csv` with a map, **pending manual review**. Calahunan (30.7%)
      and Hibao-an Sur (23.7%) indicators describe only their connected residents.
    - *Milestone 03 (desk evidence, nothing applied):* 2,537 of the 3,969 have no mapped way of any
-     kind within 250 m. 2,326 of them form one cluster in Calahunan / Hibao-an Sur, which needs
-     imagery and local verification. 832 are cut off by a creek or river (Calajunan Creek 291). 528
+     kind within 250 m. 2,326 of them form one cluster in Calahunan / Hibao-an Sur. A reviewer
+     imagery check (2020 and 2026) shows paved, populated subdivisions there whose streets are
+     missing from the walk network: an artefact of the network data, not a real lack of access. 832 are cut off by a creek or river (Calajunan Creek 291). 528
      are next to mapped ways that OSM does not link to the main network. 72 have their centre in
      mapped water (53 in ponds). The count is tolerance-sensitive: 2,835 / 1,922 / 1,407 would remain
      at 300 / 400 / 500 m.
@@ -775,6 +776,12 @@ Audit PASS 50 / WARN 3 → PASS 54 / WARN 4 (new WARN: stale `e7_buffer_3km`), F
   Tabuc Suba's and Baybay Tanza's), 72 in mapped water (53 in 30 pond polygons, none contradicted
   by mapped ways).
 - The 13 external facilities are all on Guimaras: they are separated by the strait, not misplaced.
+- *Reviewer imagery check* (Google Earth Pro; Maxar 2020-05-15, Airbus 2026-07-22): the Calahunan /
+  Hibao-an Sur cluster is a set of established paved residential subdivisions (Monterosa Estate,
+  Anaros Village), populated since at least 2020, and not a landfill. Their streets are absent from
+  the walk network, so the cluster's not-connected status is a network-data artefact. Whether the
+  streets are unmapped in OSM or excluded by the walk filter (for example `access=private`) is still
+  open. Nothing applied.
 - 4,812 connected residents rely on a longer connector because their nearest mapped way is an
   unlinked fragment; fragment F001 is a 10.4 km subdivision 10.9 m from the main network.
 

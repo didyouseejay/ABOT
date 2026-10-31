@@ -109,6 +109,29 @@ probably WorldPop spill-over at settlement edges.
 | **Tabuc Suba (La Paz)** (250; 6.4%) | All 6 cells: `osm_fragment_not_linked` → F001 | The cells are next to the subdivision streets of F001. F001's gap to the main network is 10.9 m (lon/lat 122.57463, 10.72756 → 122.57455, 10.72762) and crosses no water. That pattern fits a gated entrance mapped with `access=private` or as a gate-only connection: the osmnx walk filter excludes `access=private` ways. **Hypothesis, unverified**: the cached responses contain only ways that passed the filter, so they cannot show what fills the gap |
 | **Baybay Tanza** (141; 6.7%) | All 7 cells: `osm_fragment_not_linked` → F100 (98) and F101 (43) | Two short, recently mapped coastal ways (ids ≈ 1.536 × 10⁹; a pedestrian way and service ways). They are 183 m and 245 m from Iloilo Fishport Access Road and Rizal Pala-pala Seaside Lane, with no water in between. The joining paths are probably not mapped |
 
+### 4.1a Reviewer imagery check: Calahunan / Hibao-an Sur cluster (2026-10-31)
+
+The user inspected the cluster centre (10.7243 N, 122.5221 E) in Google Earth Pro on two dates:
+Maxar imagery of 2020-05-15 and Airbus imagery of 2026-07-22.
+
+- **Observed:** established residential subdivisions with a complete paved street grid
+  (Monterosa Estate with its clubhouse and roundabout, Anaros Village and surrounding blocks). They
+  are already densely built in 2020 and denser in 2026.
+- **Landfill hypothesis: ruled out** for this cluster.
+- **Population placement: consistent with imagery.** Houses are visible where WorldPop 2020 places
+  residents, so `no_dwellings_visible` is unlikely.
+- **Network:** the walk network has no edge within 250–490 m of the cluster cells, although streets
+  are visible on the imagery, and no cached OSM response contains the names "Monterosa" or "Anaros".
+  The not-connected status of these residents is therefore a **network-data artefact**, not an
+  absence of access. The Calahunan (30.7%) and Hibao-an Sur (23.7%) not-connected shares overstate
+  the real situation.
+- **Still open:** whether the streets are absent from OSM or present but excluded by the osmnx walk
+  filter (for example `access=private` on a gated subdivision). The cache cannot distinguish the two,
+  because excluded ways are never downloaded. This needs a check on openstreetmap.org or an approved
+  Overpass query (decision 2).
+- **Not applied:** no cell was connected, and no reviewer column was filled by the tool. The user
+  records decisions per cell (likely `missing_osm_path`).
+
 ### 4.2 Ponds (the 38 cells inside mapped ponds)
 
 - 38 cells, 53.2 residents, 30 `water=pond` polygons, 8 barangays (So-oc, Navais, Ingore,
@@ -200,7 +223,7 @@ Ranked by residents affected and by whether the evidence is ready.
 
 | # | Decision | Affects | Evidence ready? | Recommendation |
 |---|---|---|---|---|
-| 1 | **Calahunan / Hibao-an Sur cluster:** unmapped lanes, no dwellings, or landfill-related? | 2,614 residents; two `rel_network = low` barangays | Desk evidence complete. **Needs imagery + local (barangay / CPDO) verification** | Inspect `validation_map.html` (imagery layer) cell by cell. Record `reviewer_decision` per cell. Do not connect or remove cells until verified |
+| 1 | **Calahunan / Hibao-an Sur cluster:** imagery check done (§4.1a): paved subdivisions, populated since at least 2020, not a landfill. Remaining question: are the streets missing from OSM or excluded by the walk filter? | 2,614 residents; two `rel_network = low` barangays | Imagery: yes. OSM status: **no** (same check as item 2) | Record `reviewer_decision` per cell (likely `missing_osm_path`). Resolve together with item 2, because one cause may explain both. Do not connect cells until the cause is known |
 | 2 | **Unlinked fragment F001 (Tabuc Suba subdivision)** and the network-filter rule | 250 unconnected + 2,134 connected-by-approximation residents (4,812 citywide across all fragments) | Gap located (10.9 m). **The cause is not knowable from the cache** | Approve a *small* new Overpass query (all `highway=*` ways within about 50 m of the F001 gap and the Baybay Tanza gaps, including `access=private` and construction) to see what fills them. Separately decide the method question: should private-access subdivision ways count as walkable for residents? |
 | 3 | **Duplicates D13, D14** (desk-confirmed) | `n_finance_bank` −1 (Muelle Loney-Montes); D14 none | Yes | Set `reviewer_decision = same_keep_related` for D13 (keep the site polygon `way/308681988`, which has the address and branch) and `same_keep_flagged` or `same_keep_related` for D14 (either one) |
 | 4 | **Baybay Tanza F100 / F101** | 141 residents | Partly | Imagery or local check for paths between the coastal ways and the Fishport road; this is covered by the query in item 2 |
