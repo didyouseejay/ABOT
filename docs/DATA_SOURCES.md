@@ -51,15 +51,15 @@ the inputs changed.
 
 | Cache file (prefix) | Query | Buffer | `timestamp_osm_base` (UTC) | Used by |
 |---|---|---|---|---|
-| `5d669ac14ae2` | walk network | 1 km | 06:13:55 | Milestone 01, baseline, sens_maxspeed_override |
-| `2987b4935257` | drive network | 1 km | 06:16:04 | Milestone 01, baseline, sens_maxspeed_override |
+| `5d669ac14ae2` | walk network | 1 km | 06:13:55 | Milestone 01, hist_buffer_1km (M02 baseline; stale sens_maxspeed_override, archived) |
+| `2987b4935257` | drive network | 1 km | 06:16:04 | Milestone 01, hist_buffer_1km (M02 baseline; stale sens_maxspeed_override, archived) |
 | `d81a70d6b287` | facilities (Milestone 01 tag set) | 1 km | 06:17:57 | Milestone 01 only (archived baseline) |
-| `bce843d2d512` | barriers | 1 km | 07:15:04 | baseline, sens_maxspeed_override |
-| `b21199209fb7` | facilities (Milestone 02 tag set) | 1 km | 07:16:21 | baseline, sens_maxspeed_override |
-| `547bf6791e75` | walk network | 3 km | 07:23:18 | e7_buffer_3km |
-| `5b51ed1ede82` | drive network | 3 km | 07:24:21 | e7_buffer_3km |
-| `5eb220f49c1c` | barriers | 3 km | 07:26:22 | e7_buffer_3km |
-| `662e760ef580` | facilities (Milestone 02 tag set) | 3 km | 07:27:27 | e7_buffer_3km |
+| `bce843d2d512` | barriers | 1 km | 07:15:04 | hist_buffer_1km (M02 baseline; stale sens_maxspeed_override, archived) |
+| `b21199209fb7` | facilities (Milestone 02 tag set) | 1 km | 07:16:21 | hist_buffer_1km (M02 baseline; stale sens_maxspeed_override, archived) |
+| `547bf6791e75` | walk network | 3 km | 07:23:18 | baseline (since M02B), e7_buffer_3km, sens_maxspeed_override (M03), `abot validate` |
+| `5b51ed1ede82` | drive network | 3 km | 07:24:21 | baseline (since M02B), e7_buffer_3km, sens_maxspeed_override (M03) |
+| `5eb220f49c1c` | barriers | 3 km | 07:26:22 | baseline (since M02B), e7_buffer_3km, sens_maxspeed_override (M03) |
+| `662e760ef580` | facilities (Milestone 02 tag set) | 3 km | 07:27:27 | baseline (since M02B), e7_buffer_3km, sens_maxspeed_override (M03), `abot validate` |
 
 Notes:
 - **The Milestone 02 facility query differs from Milestone 01.** It adds `amenity=health_post`,

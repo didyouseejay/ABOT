@@ -9,14 +9,15 @@ at the end**, newest first.
 - Repository: `abot` (Python package `abot`, v0.1.0)
 - Author: didyouseejay (carljohn.coopera@wvsu.edu.ph), West Visayas State University
 - Study area: Iloilo City, Iloilo, Western Visayas (Region VI), Philippines
-- Current state: **Milestone 02B implemented, uncommitted** (2026-10-31): 3 km baseline buffer,
-  census-anchored population weights, barangay reliability flags, read-only `abot audit`, manual
-  review files (pending review). Builds on Milestone 02 (audit, validity assessment, Priority 0
-  corrections, E7)
+- Current state: **Milestone 03 implemented, uncommitted** (2026-10-31): desk validation of the
+  open review items (`abot validate`), regenerated speed-policy sensitivity, audit of experiment
+  runs. No review decision applied. Builds on Milestone 02B (commit `3e85764`: 3 km baseline,
+  census-anchored weights, reliability flags, `abot audit`, manual review files)
 - Detailed references: [docs/METHODOLOGY.md](docs/METHODOLOGY.md), [docs/DATA_DICTIONARY.md](docs/DATA_DICTIONARY.md),
   [docs/DATA_SOURCES.md](docs/DATA_SOURCES.md), [docs/MILESTONE_02_ANALYTICAL_AUDIT.md](docs/MILESTONE_02_ANALYTICAL_AUDIT.md),
   [docs/MILESTONE_02_VALIDITY_ASSESSMENT.md](docs/MILESTONE_02_VALIDITY_ASSESSMENT.md),
-  [docs/MILESTONE_02_RESULTS.md](docs/MILESTONE_02_RESULTS.md), [docs/MILESTONE_02B_RESULTS.md](docs/MILESTONE_02B_RESULTS.md)
+  [docs/MILESTONE_02_RESULTS.md](docs/MILESTONE_02_RESULTS.md), [docs/MILESTONE_02B_RESULTS.md](docs/MILESTONE_02B_RESULTS.md),
+  [docs/MILESTONE_03_RESULTS.md](docs/MILESTONE_03_RESULTS.md)
 
 ---
 
@@ -149,6 +150,7 @@ abot report  ->  data/processed/qa_report.md, abot_map.html
 abot all     ->  fetch + build + report
 abot compare BASE VARIANT  ->  data/processed/comparisons/<name>/  (city-wide, barangay, cell)
 abot review  ->  data/processed/review/  (manual-review files and maps; changes no data)
+abot validate -> data/processed/review/m03/  (desk evidence for the review items; Overpass cache only)
 abot audit   ->  console (or --output FILE outside data/): PASS / WARN / FAIL / INFO; read-only
 ```
 
@@ -164,7 +166,7 @@ You can run single build stages with `abot build --only population osm`.
 
 | Module | Responsibility |
 |---|---|
-| [src/abot/cli.py](src/abot/cli.py) | Command-line entry point (`fetch`, `build`, `report`, `all`, `compare`, `review`, `audit`) |
+| [src/abot/cli.py](src/abot/cli.py) | Command-line entry point (`fetch`, `build`, `report`, `all`, `compare`, `review`, `validate`, `audit`) |
 | [src/abot/config.py](src/abot/config.py) | Loads [config/settings.yaml](config/settings.yaml), resolves data paths |
 | [src/abot/fetch/common.py](src/abot/fetch/common.py) | Streaming download in 1 MiB chunks, cache check, provenance manifest with SHA-256 |
 | [src/abot/fetch/sources.py](src/abot/fetch/sources.py) | Finds resources through the HDX CKAN API; WorldPop URL template |
@@ -177,10 +179,12 @@ You can run single build stages with `abot build --only population osm`.
 | [src/abot/compare.py](src/abot/compare.py) | Comparison of two runs (Milestone 02) |
 | [src/abot/reliability.py](src/abot/reliability.py) | Barangay reliability flags and the facility-inventory table (Milestone 02B) |
 | [src/abot/review.py](src/abot/review.py) | Manual-review files and maps (Milestone 02B) |
-| [src/abot/audit.py](src/abot/audit.py) | Read-only audit of inputs, outputs, staleness and consistency (Milestone 02B) |
+| [src/abot/audit.py](src/abot/audit.py) | Read-only audit of inputs, outputs, staleness (including experiment runs) and consistency (Milestone 02B, 03) |
+| [src/abot/validation.py](src/abot/validation.py) | Desk evidence for duplicates, unconnected cells, network fragments and disconnected facilities (Milestone 03) |
 | [tests/test_core.py](tests/test_core.py) | Offline unit tests (Milestone 01) |
 | [tests/test_m02.py](tests/test_m02.py) | Offline regression tests for the Milestone 02 corrections |
 | [tests/test_m02b.py](tests/test_m02b.py) | Offline regression tests for Milestone 02B |
+| [tests/test_m03.py](tests/test_m03.py) | Offline regression tests for Milestone 03 |
 
 ### Outputs (`data/processed/`)
 
@@ -191,6 +195,7 @@ You can run single build stages with `abot build --only population osm`.
 | `facility_inventory.csv` | Per indicator group: destinations in and outside the city, connected, unnamed, not decided by a tag rule, pending duplicate review; inventory status |
 | `drive_speed_sensitivity.csv` | City-wide car-time shares with the drive-network leg × 1, 1.5, 2 |
 | `review/` | Manual-review files (duplicates, unconnected cells), `review.gpkg`, two HTML maps; status `pending` |
+| `review/m03/` | Desk-validation evidence (`abot validate`): duplicate assessment, cell diagnostics, network fragments, pond polygons, disconnected facilities, tolerance sensitivity, `validation.gpkg`, `validation_map.html` |
 | `facilities.csv` | Every mapped facility with OSM id and tags, sub-type, tier, classification status and reason |
 | `facility_exclusions.csv` | Merged points, flagged possible duplicates, unmatched features |
 | `barangay_population.csv` | Per barangay: PSA 2020 census, census-adjusted total and anchoring factor, original WorldPop 2020/2026 (fractional and centre rule), cell counts, share from straddling cells |
@@ -492,9 +497,9 @@ evacuation and transport are descriptive-only categories (see Section 8).
 | `rel_population` ok / caution / low | 102 / 51 / 27 |
 | `rel_network` ok / caution / low | 170 / 6 / 4 |
 | `rel_overall` ok / caution / low; ranking-eligible | 92 / 57 / 31; 149 |
-| `abot audit` (3 km baseline) | PASS 50, WARN 3 (all pending reviews or real findings), FAIL 0, INFO 11 |
+| `abot audit` (3 km baseline) | M02B: PASS 50, WARN 3, FAIL 0, INFO 11. M03 (with the experiment-run checks): PASS 54, WARN 4 (pending reviews, Guimaras facilities, stale `e7_buffer_3km`), FAIL 0, INFO 11 |
 
-### Unit tests (85, offline, all passing; the 13 Milestone 01 tests are listed here, 40 Milestone 02 tests are in `tests/test_m02.py`, 32 Milestone 02B tests in `tests/test_m02b.py`)
+### Unit tests (103, offline, all passing; the 13 Milestone 01 tests are listed here, 40 Milestone 02 tests are in `tests/test_m02.py`, 32 Milestone 02B tests in `tests/test_m02b.py`, 18 Milestone 03 tests in `tests/test_m03.py`)
 
 - Conversion from old PSGC codes to COD-AB p-codes (3 cases).
 - Merging of OSM query tags (lists and "any value").
@@ -650,6 +655,17 @@ still be near one in a neighbouring barangay; the travel-time indicators account
      and they are listed with coordinates, blocking features and nearby paths in
      `review/unconnected_cells_review.csv` with a map, **pending manual review**. Calahunan (30.7%)
      and Hibao-an Sur (23.7%) indicators describe only their connected residents.
+   - *Milestone 03 (desk evidence, nothing applied):* 2,537 of the 3,969 have no mapped way of any
+     kind within 250 m. 2,326 of them form one cluster in Calahunan / Hibao-an Sur, which needs
+     imagery and local verification. 832 are cut off by a creek or river (Calajunan Creek 291). 528
+     are next to mapped ways that OSM does not link to the main network. 72 have their centre in
+     mapped water (53 in ponds). The count is tolerance-sensitive: 2,835 / 1,922 / 1,407 would remain
+     at 300 / 400 / 500 m.
+   - *Milestone 03:* the largest-component filter drops 111 OSM fragments (39.5 km of ways). Besides
+     the unconnected cells, 4,812 *connected* residents (1.05%) have an unlinked fragment as their
+     nearest mapped way and reach the main network by a longer straight connector (median 104 m).
+     2,134 of them are in one 10.4 km subdivision in Tabuc Suba (La Paz) whose streets are 10.9 m
+     from the main network (fragment F001; cause unverified).
 7. **Boundary definition.** 72.63 km² is the area of the COD-AB v03 polygon (land), not the official
    land area. The often-cited 78.34 km² has no reproducible geometry and is no longer used as a
    comparison (P4). There is an inland mismatch of about 2.6 km² with OSM on the northern boundary
@@ -667,10 +683,15 @@ Treatments P1–P7 from [docs/MILESTONE_02_VALIDITY_ASSESSMENT.md](docs/MILESTON
 are implemented in Milestone 02B, except district aggregates (P2), the optional boundary QA
 against OSM (P4) and the connector radius × tolerance experiment (P3).
 
-11. **Sensitivity analysis is partial.** Tested so far: the OSM buffer (E7), the speed policy and the
-    car network-time factors (× 1.5, × 2). E1, E3, E4 and E6 remain.
+11. **Sensitivity analysis is partial.** Tested so far: the OSM buffer (E7), the speed policy
+    (regenerated on the 3 km baseline in Milestone 03), the car network-time factors (× 1.5, × 2)
+    and the origin connector tolerance (Milestone 03, not applied). E1, E3, E4 and E6 remain.
 12. **Facility duplicates.** 14 possible duplicate pairs are kept, never merged automatically, and
-    are pending manual review (`review/possible_duplicates_review.csv`).
+    are pending manual review (`review/possible_duplicates_review.csv`). *Milestone 03 desk
+    assessment:* 2 are the same facility (D13, D14), 5 are distinct (bank and ATM), 6 are likely
+    duplicates and 1 is uncertain. They affect facility counts only (≤ 41 m position shifts).
+13. **External facilities.** 13 facilities in the 3 km buffer are not connected. All are on Guimaras,
+    across the Iloilo Strait, and are never used as destinations (Milestone 03).
 
 ---
 
@@ -682,6 +703,7 @@ uv run abot fetch       # ~550 MB into data/raw (records manifest.json with SHA-
 uv run abot build       # boundaries -> population -> osm -> accessibility
 uv run abot report      # qa_report.md and abot_map.html
 uv run abot review      # manual-review files (changes no data)
+uv run abot validate    # Milestone 03 desk evidence (Overpass cache only, changes no data)
 uv run abot audit       # read-only PASS / WARN / FAIL check of everything above
 uv run pytest           # offline unit tests
 ```
@@ -690,7 +712,10 @@ uv run pytest           # offline unit tests
   The exact Milestone 01 code is commit `3edc0dd`, and its outputs are in `data/archive/m01_3edc0dd/`.
 - Archives have SHA-256 records (`data/archive/<name>.sha256.json`), checked by `abot audit`.
 - Builds are deterministic (verified under different `PYTHONHASHSEED` values after the M02B
-  mixed-class speed fix).
+  mixed-class speed fix, and again in Milestone 03 for the regenerated `sens_maxspeed_override`
+  run: byte-identical CSVs and `access_cells` layer).
+- `abot audit` also checks every `config/experiments/*` run against its own configuration and the
+  code dates (Milestone 03), so stale experiment outputs are flagged.
 
 - Inputs are verified by the SHA-256 checksums in Section 3 and `data/raw/manifest.json`.
 - All parameters are in `config/settings.yaml`.
@@ -707,7 +732,60 @@ uv run pytest           # offline unit tests
 Newest entries first. Each entry records the date, the milestone, what changed and why, files
 affected, and any effect on results. Future work is appended here as it is done.
 
-### 2026-10-31 — Milestone 02B: baseline adoption, reliability flags, audit, manual review (uncommitted)
+### 2026-10-31 — Milestone 03: manual spatial validation and analytical finalization (uncommitted)
+
+**Why:** to finish the open review items from Milestone 02B (14 duplicate pairs, 302 unconnected
+cells, 13 disconnected external facilities) and the stale speed-policy sensitivity outputs, without
+applying any unverified manual decision.
+
+**Added**
+- `abot validate` (`src/abot/validation.py`). It reads outputs, review files and the Overpass cache;
+  it refuses HTTP requests and writes only `data/processed/review/m03/`. Contents: duplicate desk
+  assessment (polygon overlap, OSM-id gap, tag identity, sub-type), the walk-network fragments dropped
+  by the largest-component filter and their gaps to the main network, a diagnostic class per
+  unconnected cell, pond-polygon checks, disconnected-facility diagnostics, a connector-tolerance
+  sensitivity, connected cells nearer to an unlinked fragment, a GeoPackage and a map.
+- `abot audit` checks: `validation_files_current`, and `experiment: <run>` freshness for every
+  `config/experiments/*` run (this is the gap that let the stale speed outputs go unnoticed).
+- 18 tests (`tests/test_m03.py`); 103 pass. `docs/MILESTONE_03_RESULTS.md`, `docs/MILESTONE_03_AUDIT.md`.
+
+**Changed**
+- `sens_maxspeed_override` rebuilt on the 3 km baseline with the current code (cache only), and
+  `comparisons/speed_override_vs_cap` regenerated. The stale 1 km / M02 outputs were moved, with a
+  SHA-256 record, to `data/archive/stale_sens_maxspeed_override_m02_1km/`.
+
+**Not changed:** no pipeline stage, no baseline output, no review decision. The three review CSVs are
+byte-identical. The M01 and M02 archives are unchanged.
+
+**Files:** `src/abot/{validation (new),audit,cli}.py`, `tests/test_m03.py` (new),
+`docs/MILESTONE_03_{RESULTS,AUDIT}.md` (new), `docs/{METHODOLOGY,DATA_SOURCES}.md`, this file;
+data: `review/m03/` (new), `sens_maxspeed_override/` and `comparisons/speed_override_vs_cap/`
+(regenerated), `data/archive/stale_sens_maxspeed_override_m02_1km/` (new), `data/raw/manifest.json`
+(`used_by_runs`).
+
+**Effect on results:** baseline indicators are unchanged. Speed-policy sensitivity (stale M02 1 km →
+regenerated 3 km): car to hospital ≤ 10 min, override vs cap 93.1% vs 81.7% → 92.0% vs 79.6%; mean
+6.38 vs 7.61 min. Walk is identical between the two runs, and no cell is faster under the cap.
+Audit PASS 50 / WARN 3 → PASS 54 / WARN 4 (new WARN: stale `e7_buffer_3km`), FAIL 0.
+
+**Findings (desk evidence, pending decisions):**
+- Duplicates: 2 same facility (D13, D14), 5 distinct, 6 likely duplicates, 1 uncertain.
+- Unconnected (3,969 residents): 2,537 with no mapped way within 250 m (2,326 in one Calahunan /
+  Hibao-an Sur cluster), 832 cut off by a watercourse, 528 next to unlinked OSM fragments (all of
+  Tabuc Suba's and Baybay Tanza's), 72 in mapped water (53 in 30 pond polygons, none contradicted
+  by mapped ways).
+- The 13 external facilities are all on Guimaras: they are separated by the strait, not misplaced.
+- 4,812 connected residents rely on a longer connector because their nearest mapped way is an
+  unlinked fragment; fragment F001 is a 10.4 km subdivision 10.9 m from the main network.
+
+**Paper notes:**
+- Report the not-connected share together with its tolerance sensitivity (3,969 at 250 m → 1,407
+  at 500 m).
+- The largest-component filter is a real source of error for gated subdivisions and newly mapped
+  coastal paths; describe it as a limitation of OSM topology.
+- Treat the duplicate desk assessment as evidence, not a decision.
+
+### 2026-10-31 — Milestone 02B: baseline adoption, reliability flags, audit, manual review (commit `3e85764`)
 
 **Why:** the user approved the 3 km buffer (E7) and validity-assessment proposals P1, P2 and P4–P7.
 Two goals: no indicator should silently drop residents, and the analytical reliability of every

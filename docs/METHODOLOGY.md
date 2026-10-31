@@ -398,7 +398,7 @@ and cell-level comparison of two runs.
 |---|---|
 | `hist_buffer_1km.yaml` | Historical 1 km buffer; with the default (3 km) it is the current E7 comparison |
 | `e7_buffer_3km.yaml` | The original E7 run (now identical to the default) |
-| `sens_maxspeed_override.yaml` | Attribution: Milestone 01 speed rule within the Milestone 02 method (outputs stale since 02B) |
+| `sens_maxspeed_override.yaml` | Attribution: the Milestone 01 speed rule (tagged maxspeed replaces the class speed) on the current baseline. Regenerated in Milestone 03; the stale 1 km outputs are archived in `data/archive/stale_sens_maxspeed_override_m02_1km/` |
 
 Built-in sensitivity: `accessibility.drive_network_time_factors: [1.5, 2.0]` multiplies the
 drive-network leg (walk legs unchanged) and writes `drive_speed_sensitivity.csv`. A simplified edge

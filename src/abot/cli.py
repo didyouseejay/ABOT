@@ -1,4 +1,4 @@
-"""Command-line entry point: `abot fetch | build | report | all | compare | review | audit`."""
+"""Command-line entry point: `abot fetch | build | report | all | compare | review | validate | audit`."""
 
 from __future__ import annotations
 
@@ -56,6 +56,11 @@ def main(argv: list[str] | None = None) -> None:
         "review",
         help="write manual-review files (duplicates, unconnected cells) to <processed>/review; changes no data",
     )
+    sub.add_parser(
+        "validate",
+        help="write desk-validation evidence for the review items to <processed>/review/m03; "
+        "reads the Overpass cache only and changes no data",
+    )
     p_aud = sub.add_parser(
         "audit", help="read-only check of inputs, outputs, staleness and consistency (PASS/WARN/FAIL)"
     )
@@ -96,3 +101,7 @@ def main(argv: list[str] | None = None) -> None:
         from abot import review
 
         review.build(s)
+    if args.command == "validate":
+        from abot import validation
+
+        validation.build(s)

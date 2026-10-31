@@ -341,6 +341,69 @@ class Audit:
                 else "older than the last accessibility build",
                 "" if ok else "re-run `abot review` (reviewer columns are kept)",
             )
+        info_path = s.processed_dir / "review" / "m03" / "run_info.json"
+        if info_path.exists() and "accessibility" in stamp:
+            info = json.loads(info_path.read_text(encoding="utf-8"))
+            late = datetime.fromtimestamp(info_path.stat().st_mtime).astimezone() < stamp["accessibility"]
+            problems = [
+                *(["older than the last accessibility build"] if late else []),
+                *(
+                    ["built with another configuration"]
+                    if info.get("config_sha256") != s.config_sha256
+                    else []
+                ),
+                *(
+                    ["rebuilt walk graph did not match the saved graph"]
+                    if not info.get("matches_saved")
+                    else []
+                ),
+            ]
+            self.add(
+                sec,
+                "validation_files_current",
+                WARN if problems else PASS,
+                "; ".join(problems) or "review/m03 generated after the last build, same configuration",
+                "re-run `abot validate`" if problems else "",
+            )
+        if s.run_name is None:
+            self.check_experiment_runs(sec)
+
+    def check_experiment_runs(self, sec: str):
+        """Outputs of config/experiments/* runs: built with their current config and current code?
+        A stale experiment folder next to fresh baseline outputs is easy to cite by mistake."""
+        exp_dir = self.s.root / "config" / "experiments"
+        for path in sorted(exp_dir.glob("*.yaml")) if exp_dir.exists() else []:
+            es = Settings(read_config(path), root=self.s.root)
+            if not es.run_name or not es.processed_dir.exists():
+                continue
+            meta = qa.read_run_meta(es)
+            problems = []
+            if not meta:
+                problems.append("no run_meta.json: built before stage recording (Milestone 02 or earlier)")
+            for stage, m in meta.items():
+                if m.get("config_sha256") != es.config_sha256:
+                    problems.append(f"{stage} built with another configuration")
+                done = datetime.fromisoformat(m["completed_utc"])
+                newer = [
+                    c
+                    for c in STAGE_CODE.get(stage, [])
+                    if (PROJECT_ROOT / "src" / "abot" / c).exists()
+                    and datetime.fromtimestamp(
+                        (PROJECT_ROOT / "src" / "abot" / c).stat().st_mtime
+                    ).astimezone()
+                    > done
+                ]
+                if newer:
+                    problems.append(f"{', '.join(newer)} changed after {stage}")
+            self.add(
+                sec,
+                f"experiment: {es.run_name}",
+                WARN if problems else PASS,
+                "; ".join(problems) or f"built with {path.name} and the current code",
+                f"re-run `abot --config {path.relative_to(self.s.root).as_posix()} build`, or archive the folder"
+                if problems
+                else "",
+            )
 
     def check_consistency(self):
         s, sec = self.s, "consistency"
