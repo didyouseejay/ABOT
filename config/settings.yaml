@@ -1,0 +1,79 @@
+# ABOT Milestone 01 configuration — Iloilo City, Philippines.
+# Paths are relative to the project root.
+
+city:
+  name: Iloilo City
+  adm3_pcode: PH0603022        # COD-AB p-code (PSGC-based)
+  expected_barangays: 180
+
+crs:
+  geographic: EPSG:4326
+  projected: EPSG:32651        # WGS 84 / UTM zone 51N — metres, used for all distances
+
+paths:
+  data_dir: data               # raw/, interim/, processed/ are created beneath this
+
+sources:
+  cod_ab:                      # OCHA COD-AB, CC BY-IGO
+    hdx_dataset: cod-ab-phl
+    resource_name: phl_admin_boundaries.gdb.zip
+  census_2020:                 # PSA 2020 census by barangay via HDX, CC BY
+    hdx_dataset: popn-single-year-age-sex-and-barangay-census-2020
+  worldpop:                    # WorldPop Global2 R2025A constrained 100 m, CC BY 4.0
+    url_template: "https://data.worldpop.org/GIS/Population/Global_2015_2030/R2025A/{year}/PHL/v1/100m/constrained/phl_pop_{year}_CN_100m_R2025A_v1.tif"
+    years: [2026, 2020]        # 2026 = main analysis year; 2020 = validated against the census
+    analysis_year: 2026
+
+osm:                           # OpenStreetMap via Overpass (osmnx), ODbL 1.0
+  network_types: [walk, drive]
+  boundary_buffer_m: 1000      # fetch slightly beyond the city so edge trips are not cut off
+
+# Facility categories. Each maps to OSM tags; a feature matches if ANY tag/value matches.
+# `true` means "any value of this key".
+facilities:
+  health:
+    amenity: [hospital, clinic, doctors, dentist]
+    healthcare: true
+  pharmacy:
+    amenity: [pharmacy]
+    shop: [chemist]
+  education:
+    amenity: [kindergarten, school, college, university]
+  safety:
+    amenity: [police, fire_station]
+  government:
+    amenity: [townhall]
+    office: [government]
+  market:
+    amenity: [marketplace]
+    shop: [supermarket]
+  finance:
+    amenity: [bank, atm]
+  transport:
+    amenity: [bus_station, ferry_terminal]
+  evacuation:                  # known to be very sparse in OSM — reported, not trusted
+    emergency: [assembly_point]
+    social_facility: [shelter]
+
+# Matching precedence when a feature fits several categories (first wins).
+# pharmacy precedes health so that healthcare=pharmacy is not counted as a health facility.
+category_priority: [pharmacy, health, education, safety, government, market, finance, transport, evacuation]
+
+accessibility:
+  walk_speed_kmh: 4.5
+  # Assumed free-flow urban speeds for roads without a maxspeed tag (most of Iloilo).
+  # No congestion model in Milestone 01 — treat drive times as optimistic.
+  drive_speeds_kmh:
+    motorway: 60
+    trunk: 40
+    primary: 30
+    secondary: 25
+    tertiary: 25
+    unclassified: 20
+    residential: 20
+    living_street: 10
+    service: 15
+  snap_speed_kmh: 4.5          # off-network leg (cell centre -> nearest node) is walked in both modes
+  thresholds_min:
+    walk: [10, 15, 30]
+    drive: [5, 10, 15]

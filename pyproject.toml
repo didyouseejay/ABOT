@@ -1,0 +1,49 @@
+[project]
+name = "abot"
+version = "0.1.0"
+description = "ABOT — geospatial accessibility and public infrastructure intelligence for Iloilo City, Philippines"
+readme = "README.md"
+authors = [
+    { name = "didyouseejay", email = "carljohn.coopera@wvsu.edu.ph" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "folium>=0.20.0",
+    "geopandas>=1.2.0",
+    "networkx>=3.7",
+    "numpy>=2.5.4",
+    "openpyxl>=3.1.5",
+    "osmnx>=2.1.1",
+    "pandas>=3.1.0",
+    "pyogrio>=0.13.0",
+    "pyproj>=3.8.0",
+    "pyyaml>=6.0.3",
+    "rasterio>=1.5.2",
+    "requests>=2.34.2",
+    "scipy>=1.18.1",
+    "shapely>=2.2.0",
+]
+
+[project.scripts]
+abot = "abot:main"
+
+[build-system]
+requires = ["uv_build>=0.13.6,<0.14.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+    "ruff>=0.17.3",
+]
+
+[tool.ruff]
+line-length = 110
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "ISC"]
+ignore = ["E501"]  # line length is left to `ruff format`
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
