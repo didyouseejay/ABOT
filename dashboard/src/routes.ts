@@ -1,8 +1,8 @@
 /**
  * The dashboard sections. Every route is registered here once; the top navigation and the router read
- * this list. `reference` marks the three reference sections, grouped at the right end of the top bar
- * (and under "Reference" at medium widths). Caveats are never written here (they come from
- * manifest.statements).
+ * this list. The five public sections are in the top bar. `reference` marks the three pages for
+ * researchers (methodology, data quality, network evidence): they are linked from About and the footer,
+ * not from the top bar, so residents are not met with technical detail first.
  */
 
 export type DatasetKey = "city" | "barangays" | "indicators" | "cells" | "facilities" | "network" | "provenance";
@@ -17,13 +17,14 @@ export interface RouteDef {
 }
 
 export const ROUTES: readonly RouteDef[] = [
-  { id: "overview", title: "Citywide overview", navLabel: "Overview", reference: false, datasets: ["city", "facilities"] },
-  { id: "map", title: "Accessibility map", navLabel: "Accessibility Map", reference: false, datasets: ["barangays", "indicators", "cells", "facilities"] },
-  { id: "barangays", title: "Barangay analysis", navLabel: "Barangay Analysis", reference: false, datasets: ["barangays", "indicators"] },
-  { id: "facilities", title: "Facilities", navLabel: "Facilities", reference: false, datasets: ["facilities", "barangays", "city"] },
-  { id: "network", title: "Network connectivity", navLabel: "Network Connectivity", reference: true, datasets: ["network", "barangays"] },
-  { id: "quality", title: "Data quality", navLabel: "Data Quality", reference: true, datasets: ["indicators", "barangays", "provenance"] },
-  { id: "about", title: "About and methodology", navLabel: "About / Methodology", reference: true, datasets: ["provenance"] },
+  { id: "overview", title: "How close are essential services?", navLabel: "Home", reference: false, datasets: ["city", "indicators"] },
+  { id: "map", title: "Map", navLabel: "Map", reference: false, datasets: ["barangays", "indicators", "cells", "facilities"] },
+  { id: "barangays", title: "Barangays", navLabel: "Barangays", reference: false, datasets: ["barangays", "indicators"] },
+  { id: "facilities", title: "Facilities", navLabel: "Facilities", reference: false, datasets: ["facilities", "barangays"] },
+  { id: "about", title: "About this dashboard", navLabel: "About", reference: false, datasets: [] },
+  { id: "methods", title: "Methodology", navLabel: "Methodology", reference: true, datasets: ["provenance"] },
+  { id: "quality", title: "Data quality", navLabel: "Data quality", reference: true, datasets: ["indicators", "barangays", "provenance"] },
+  { id: "network", title: "Network connectivity", navLabel: "Network connectivity", reference: true, datasets: ["network", "barangays"] },
 ];
 
 export const ROUTE_IDS: readonly string[] = ROUTES.map((r) => r.id);

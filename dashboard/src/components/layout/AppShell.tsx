@@ -1,25 +1,26 @@
 /**
- * The application shell: skip link, top navigation, provenance colophon and notices, the main region,
- * "Notes for this view" and the footer. Pure: it receives the view and the bundle state, so it renders
- * the same in the browser and in tests.
+ * The application shell: skip link, top bar, the data alert (only when something failed to load), the
+ * main region, "Notes for this view" (pages for researchers only) and the footer. Pure: it receives
+ * the view and the bundle state, so it renders the same in the browser and in tests.
  */
 import type { BundleState } from "../../data/BundleContext.tsx";
 import { AboutPage } from "../../pages/AboutPage.tsx";
 import { BarangaysPage } from "../../pages/BarangaysPage.tsx";
 import { FacilitiesPage } from "../../pages/FacilitiesPage.tsx";
 import { MapPage } from "../../pages/MapPage.tsx";
+import { MethodsPage } from "../../pages/MethodsPage.tsx";
 import { NetworkPage } from "../../pages/NetworkPage.tsx";
 import { OverviewPage } from "../../pages/OverviewPage.tsx";
 import { QualityPage } from "../../pages/QualityPage.tsx";
-import { failedDatasets } from "../../model/shell.ts";
-import { routeDef } from "../../routes.ts";
+import { formatUtc } from "../../model/format.ts";
+import { ROUTES, routeDef } from "../../routes.ts";
 import { type View, ViewContext } from "../../view.tsx";
 import { NoteRegistry, NotesFooter, NotesProvider } from "../notes.tsx";
 import { PageHeader } from "../ui.tsx";
 import { FatalState, LoadingState } from "../states/States.tsx";
-import { PROJECT } from "./Brand.tsx";
+import { Mark, PROJECT } from "./Brand.tsx";
+import { DataAlert } from "./DataAlert.tsx";
 import { MAIN_ID } from "./ids.ts";
-import { Notices, ProvenanceBar } from "./ProvenanceBar.tsx";
 import { TopBar } from "./TopBar.tsx";
 
 export interface AppShellProps {
@@ -28,9 +29,6 @@ export interface AppShellProps {
   navOpen: boolean;
   onToggleNav: () => void;
   onNavigate: () => void;
-  /** null: the default (open only when a dataset failed). */
-  noticesOpen?: boolean | null;
-  onToggleNotices?: () => void;
 }
 
 const PAGES = {
@@ -38,9 +36,10 @@ const PAGES = {
   map: MapPage,
   barangays: BarangaysPage,
   facilities: FacilitiesPage,
-  network: NetworkPage,
-  quality: QualityPage,
   about: AboutPage,
+  methods: MethodsPage,
+  quality: QualityPage,
+  network: NetworkPage,
 } as const;
 
 function Content({ route, state }: { route: string; state: BundleState }) {
@@ -56,38 +55,55 @@ function Content({ route, state }: { route: string; state: BundleState }) {
   return <Page bundle={state.bundle} />;
 }
 
-export function AppShell({ view, state, navOpen, onToggleNav, onNavigate, noticesOpen = null, onToggleNotices = () => {} }: AppShellProps) {
+function Footer({ view, state }: { view: View; state: BundleState }) {
+  const research = ROUTES.filter((r) => r.reference);
+  return (
+    <footer className="footer">
+      <div className="footer__inner">
+        <div className="footer__brand">
+          <Mark />
+          <div>
+            <p className="footer__name">
+              {PROJECT.name} · {PROJECT.tagline}
+            </p>
+            <p className="footer__sub">
+              {PROJECT.fullName}. A research project of {PROJECT.institution}.
+            </p>
+          </div>
+        </div>
+        <nav className="footer__links" aria-label="For researchers">
+          <span className="footer__label">For researchers</span>
+          {research.map((r) => (
+            <a key={r.id} href={view.href(r.id)}>
+              {r.navLabel}
+            </a>
+          ))}
+        </nav>
+        {state.status === "ready" && <p className="footer__meta">Data prepared {formatUtc(state.bundle.manifest.generated_utc).slice(0, 10)} · Map data © OpenStreetMap contributors</p>}
+      </div>
+    </footer>
+  );
+}
+
+export function AppShell({ view, state, navOpen, onToggleNav, onNavigate }: AppShellProps) {
   // A fresh registry per render: the notes footer lists what this render of the page referenced.
   const reg = new NoteRegistry();
   const statements = state.status === "ready" ? state.bundle.manifest.statements : [];
-  const open = noticesOpen ?? (state.status === "ready" && failedDatasets(state.bundle).length > 0);
+  const research = routeDef(view.route).reference;
   return (
     <ViewContext.Provider value={view}>
-      <NotesProvider reg={reg} statements={statements} footer={view.route !== "map"}>
+      <NotesProvider reg={reg} statements={statements} footer={research}>
         <div className="shell" data-nav-open={navOpen ? "true" : "false"} data-route={view.route}>
           <a className="skip-link" href={`#${MAIN_ID}`}>
             Skip to content
           </a>
           <TopBar route={view.route} href={(r) => view.href(r)} navOpen={navOpen} onToggleNav={onToggleNav} onNavigate={onNavigate} />
-          <ProvenanceBar state={state} noticesOpen={open} onToggleNotices={onToggleNotices} />
-          {state.status === "ready" && <Notices bundle={state.bundle} open={open} qualityHref={view.href("quality")} />}
+          {state.status === "ready" && <DataAlert bundle={state.bundle} qualityHref={view.href("quality")} />}
           <main className="main" id={MAIN_ID} tabIndex={-1}>
             <Content route={view.route} state={state} />
           </main>
           <NotesFooter />
-          <footer className="footer">
-            <div className="footer__inner">
-              <span className="footer__tag">{PROJECT.tagline}</span>
-              <span>{PROJECT.phrase}</span>
-              <span>
-                {PROJECT.name} · {PROJECT.institution} · Research prototype, read-only
-              </span>
-              <span className="footer__links">
-                <a href={view.href("quality")}>Data Quality</a>
-                <a href={view.href("about")}>Methodology</a>
-              </span>
-            </div>
-          </footer>
+          {view.route !== "map" && <Footer view={view} state={state} />}
         </div>
       </NotesProvider>
     </ViewContext.Provider>

@@ -1,6 +1,6 @@
 /**
- * Wires the browser to the pure shell: the address (route + view parameters), the bundle state, the
- * menu panel and the notices. After a route change the page heading receives focus, so keyboard and
+ * Wires the browser to the pure shell: the address (route + view parameters), the bundle state and the
+ * menu panel. After a route change the page heading receives focus, so keyboard and
  * screen-reader users land on the new page; the menu closes on navigation and on Escape.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -36,7 +36,6 @@ export default function App() {
   const state = useBundle();
   const [hash, replaceHash] = useHash();
   const [navOpen, setNavOpen] = useState(false);
-  const [noticesOpen, setNoticesOpen] = useState<boolean | null>(null);
   const first = useRef(true);
 
   const choices = state.status === "ready" ? choicesOf(state.bundle.manifest) : FALLBACK_CHOICES;
@@ -62,7 +61,7 @@ export default function App() {
 
   const route = view.route;
   useEffect(() => {
-    document.title = `${routeDef(route).navLabel} · ABOT`;
+    document.title = `${routeDef(route).navLabel} · ABOT Iloilo City`;
     document.body.dataset["route"] = route;
     setNavOpen(false);
     if (first.current) {
@@ -89,11 +88,6 @@ export default function App() {
 
   const toggle = useCallback(() => setNavOpen((o) => !o), []);
   const close = useCallback(() => setNavOpen(false), []);
-  const toggleNotices = useCallback(() => {
-    const el = document.getElementById("notices");
-    // open if it is currently hidden (the default state depends on the bundle, see AppShell)
-    setNoticesOpen(el ? el.hidden === true : true);
-  }, []);
 
-  return <AppShell view={view} state={state} navOpen={navOpen} onToggleNav={toggle} onNavigate={close} noticesOpen={noticesOpen} onToggleNotices={toggleNotices} />;
+  return <AppShell view={view} state={state} navOpen={navOpen} onToggleNav={toggle} onNavigate={close} />;
 }

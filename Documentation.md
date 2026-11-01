@@ -9,7 +9,10 @@ at the end**, newest first.
 - Repository: `abot` (Python package `abot`, v0.1.0)
 - Author: didyouseejay (carljohn.coopera@wvsu.edu.ph), West Visayas State University
 - Study area: Iloilo City, Iloilo, Western Visayas (Region VI), Philippines
-- Current state: **Milestone 05.2 S3, uncommitted** (2026-11-01): dashboard application shell
+- Current state: **Milestone 05.3, uncommitted** (2026-11-01): the dashboard front end redesigned for
+  residents and barangay/city officials (plain language, five public sections, street/satellite
+  background maps); the technical pages move under "For researchers". No analytical result changed.
+  Before that, **Milestone 05.2 S3** (2026-11-01): dashboard application shell
   (navigation, provenance bar, interface states, seven placeholder sections) on the verified
   bundle loader of S0–S2 (commit `c913983`); no analytical page yet.
   Before that, **Milestone 05.1** (2026-11-01): dashboard data exporter
@@ -233,7 +236,8 @@ Column definitions: [docs/DATA_DICTIONARY.md](docs/DATA_DICTIONARY.md).
 - Dev tools: pytest, ruff. No dependencies were added in Milestone 02 or 02B.
 - Frontend (`dashboard/`, Milestone 05.2): Node 24.18.0, npm 10.8.1; versions pinned in
   `dashboard/package.json` and `dashboard/package-lock.json`. Runtime: react 19.3.1, react-dom 19.3.1,
-  leaflet 1.9.4, react-leaflet 5.0.0, chart.js 4.6.1. Development: vite 8.3.5,
+  leaflet 1.9.4, react-leaflet 5.0.0, chart.js 4.6.1, @fontsource/atkinson-hyperlegible 5.3.0
+  (self-hosted font, M05.3). Development: vite 8.3.5,
   @vitejs/plugin-react 6.1.2, typescript 7.0.2, vitest 5.0.5, @types/react 19.3.0,
   @types/react-dom 19.3.0, @types/leaflet 1.9.22, @types/node 24.19.2 (types only).
 - Run npm scripts from PowerShell or cmd. In the Git Bash used by the coding assistant,
@@ -539,7 +543,7 @@ evacuation and transport are descriptive-only categories (see Section 8).
 | `abot audit` (3 km baseline) | M02B: PASS 50, WARN 3, FAIL 0, INFO 11. M03 (with the experiment-run checks): PASS 54, WARN 4 (pending reviews, Guimaras facilities, stale `e7_buffer_3km`), FAIL 0, INFO 11. M04: PASS 55 (new archive `hist_e7_buffer_3km_m02` verified), WARN 4, FAIL 0, INFO 11. M04 follow-up: PASS 57 (A3 layer current; review restore point verified), WARN 3 (`e7_buffer_3km` cleared; 7 duplicates still pending), FAIL 0, INFO 11 |
 | Determinism (M04 + follow-up) | `abot components` under `PYTHONHASHSEED` 0 and 12345: all 17 evidence files and the A3 CSVs byte-identical (A3 GeoPackage identical in content); A1 reproduces the saved baseline, and baseline file hashes are unchanged on every run |
 
-### Unit tests (230 Python, all passing; 79 Vitest tests in `dashboard/test/`, all passing; the 13 Milestone 01 tests are listed here, 40 Milestone 02 tests are in `tests/test_m02.py`, 32 Milestone 02B tests in `tests/test_m02b.py`, 18 Milestone 03 tests in `tests/test_m03.py`, 97 Milestone 04 tests in `tests/test_m04.py`, 30 Milestone 05 tests in `tests/test_m05.py`, 2 of which read the real outputs and are skipped without them)
+### Unit tests (230 Python, all passing; 81 Vitest tests in `dashboard/test/`, all passing; the 13 Milestone 01 tests are listed here, 40 Milestone 02 tests are in `tests/test_m02.py`, 32 Milestone 02B tests in `tests/test_m02b.py`, 18 Milestone 03 tests in `tests/test_m03.py`, 97 Milestone 04 tests in `tests/test_m04.py`, 30 Milestone 05 tests in `tests/test_m05.py`, 2 of which read the real outputs and are skipped without them)
 
 - Conversion from old PSGC codes to COD-AB p-codes (3 cases).
 - Merging of OSM query tags (lists and "any value").
@@ -806,6 +810,125 @@ uv run pytest           # offline unit tests
 
 Newest entries first. Each entry records the date, the milestone, what changed and why, files
 affected, and any effect on results. Future work is appended here as it is done.
+
+### 2026-11-01 — Milestone 05.3: public redesign of the dashboard, with background maps (uncommitted)
+
+**Why:** The dashboard's likely users are residents and barangay/city officials, not researchers. The
+S4–S7 pages put research detail first: scenario codes (A1/A2/A3), statement chips (DQ-…), integrity
+hashes, p90 and sensitivity tables. The map had no background, so it was hard to tell where things
+are. This step makes the public pages plain and uncluttered, adds street and satellite backgrounds,
+and keeps all technical detail one link away for the thesis committee and other researchers.
+
+**Design basis:** the ui-ux-pro-max skill's design-system search (civic/public-service product).
+- Adopted: civic blue palette (#1E40AF primary) and Atkinson Hyperlegible, a font designed for
+  legibility.
+- Not adopted: the suggested "video hero" pattern and "exaggerated minimalism" style, which suit
+  marketing pages, not a data tool.
+- The map-specific UX query returned no database match, so the map controls follow the general
+  rules: 44 px touch targets, visible labels, a legend with a word for every colour, and keyboard
+  operation.
+
+**Information architecture (`dashboard/src/routes.ts`)**
+- Top bar, five public sections: Home, Map, Barangays, Facilities, About.
+- "For researchers", linked from About and the footer: Methodology (`#/methods`, the former
+  About / Methodology page, unchanged in content), Data quality, Network connectivity.
+- The provenance bar is removed from every page. Its facts (bundle version, generation time,
+  integrity, audit, code version, datasets) are now a "Dataset status" panel on Data quality. The
+  public pages show only the date the data was prepared.
+- The facility inventory table moves from Overview/Facilities to Data quality.
+- A notice appears on the public pages only when a dataset failed to load or the bundle is a newer
+  minor version (`DataAlert.tsx`). Known issues stay on Data quality.
+- "Notes for this view" (statement texts) appears on the researcher pages only.
+
+**Public pages**
+- Home: one sentence answers the question, e.g. "66% of Iloilo City residents can walk to a health
+  center or clinic within 15 minutes", with service, walking/by car and time-limit controls.
+  - Ten service cards show the same figure for every service.
+  - "Barangays with the least access" lists the five lowest, ranking-eligible barangays only.
+  - "Good to know" gives three plain caveats.
+  - Removed from Home: the A1 comparison, the population-by-category bar, the distribution chart,
+    the driving sensitivity table and the inventory.
+- Map: Leaflet with a background-map switch.
+  - Backgrounds: Street map (standard OpenStreetMap tiles), Satellite (Esri World Imagery, with Esri
+    place names on top), or No background.
+  - The choice is remembered in the browser (localStorage) and shared by every map, including the
+    Facilities and Network maps.
+  - A "Color strength" slider lets the imagery show through the barangay colours.
+  - Barangays are coloured by share of residents or by typical time. The facilities of the selected
+    service and an optional 100 m grid can be shown.
+  - Clicking a barangay opens a details panel.
+  - Removed from the map: the A3-category cell colouring, the low-reliability dashed outline, the
+    separate outline layer and the table view (the Barangays page is the list view).
+- Barangays: search, service, mode, time limit and sort ("Least access first", etc.).
+  - Ranks are given to ranking-eligible barangays only.
+  - When sorted by access, the others follow in a separate "Not ranked · limited data" group.
+  - Equal shares are ordered by the longer typical trip.
+  - The profile shows every service for walking and by car, the mapped facility counts, and the
+    data confidence in words (Good / Fair / Limited).
+  - Removed: A1 columns, p90, the unconnected % column, p-codes, the reliability filter chips and
+    the compare tray.
+- Facilities: type chips with counts, a name search, the map and a list. The card says where the
+  place is, whether it counts in travel times (and why not), and links to OpenStreetMap.
+  - Tier, roles, classification reason, connection distance and duplicate review are left to Data
+    quality.
+- About: what the dashboard does, the method in four plain steps, how to read the colours, five
+  things to keep in mind, who made it, and cards to the researcher pages.
+
+**Wording rules for the public pages (`src/model/plain.ts`, `src/model/labels.ts`)**
+- Walking means the A3 (primary) result; "by car" means A1 driving. The A1 walking comparison
+  appears only on the researcher pages.
+- Everyday service names, e.g. "Health center" for primary care and "School" for basic education.
+- Figures are rounded to whole numbers for reading ("<1%" for a small non-zero share); null is
+  "No data", never 0. The technical pages keep the source precision.
+- "Typical" walk or drive is the exported mean for connected residents. The p90 statistic is not
+  shown on the public pages.
+- Departure from rule R2: the short caveats on Home and About are written in plain language rather
+  than quoted from `manifest.statements`. The verbatim statements remain on the researcher pages.
+
+**Visual system**
+- Tokens (`src/styles/tokens.css`): civic blue palette, larger type scale, larger radii.
+- Map ramps: a blue-to-orange diverging scheme replaces the teal and purple ramps. Blue means close
+  or most residents; orange means far or few. It stays readable with red–green colour blindness,
+  and walking and driving keep their own class breaks.
+- Styles: `src/styles/site.css` holds the shell and public pages. `app.css` keeps the base and the
+  researcher-page components; its obsolete top-bar, provenance, map and footer sections were removed.
+- New components:
+  - `components/glyphs.tsx`: line icons for services and controls;
+  - `components/controls.tsx`: service, mode and time-limit controls;
+  - `map/BasemapSwitcher.tsx`;
+  - `components/layout/DataAlert.tsx`.
+- Removed: `components/layout/ProvenanceBar.tsx`.
+
+**External requests (changed):** S4–S7 loaded no basemap tiles. The dashboard now requests map tiles
+from tile.openstreetmap.org (street) or server.arcgisonline.com (satellite and place names), only
+while a map with that background is on screen. "No background" requests none. The bundle itself is
+unchanged and still loaded only from the dashboard's own folder. Attribution for each background is
+shown on the map. CARTO tiles were tried first and rejected: they now require an API key.
+
+**Tests:** `test/shell.test.ts` rewritten for the new navigation and pages (25 tests). Kept
+guarantees:
+- null shows as "No data", never 0;
+- success tones only for verified, passed or clean states;
+- a skipped audit is never shown as passed;
+- a missing dataset is named;
+- statements are quoted verbatim on the researcher pages.
+
+New checks:
+- no scenario or statement codes on the public pages;
+- the headline sentence is read from the bundle.
+
+`test/realBundle.test.ts`: the headline matches the exported A3 value, and unranked rows equal the
+ineligible count. Vitest: 81 tests, all passing. `tsc` (both configs) and `vite build` pass.
+
+**Checked in a browser on the real bundle:** all public pages at 1440 px, with no horizontal overflow
+at 390 px.
+- Switching street, none and satellite: tiles load, 48 of 48 for satellite, and the choice persists.
+- No console errors.
+- One overflow fixed: the reliability table on Data quality now scrolls on narrow screens.
+
+**Unchanged:** the bundle, `data/`, `vite/`, the loader and validation, Python code and tests.
+
+**Effect on results:** none (presentation only).
 
 ### 2026-11-01 — Milestone 05.2 S4–S7: analytical pages from the Claude Design prototype (uncommitted)
 

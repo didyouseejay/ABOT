@@ -21,6 +21,53 @@ const GROUPS: Record<string, [label: string, phrase: string]> = {
 export const groupLabel = (id: string): string => GROUPS[id]?.[0] ?? id;
 export const groupPhrase = (id: string): string => GROUPS[id]?.[1] ?? id;
 
+/**
+ * Everyday names for the public pages (the technical pages keep groupLabel). The plural is used in
+ * map toggles ("Show hospitals"); the phrase completes "can walk to …".
+ */
+const SERVICES: Record<string, [name: string, plural: string, phrase: string]> = {
+  health_hospital: ["Hospital", "hospitals", "a hospital"],
+  health_primary_care: ["Health center", "health centers and clinics", "a health center or clinic"],
+  pharmacy: ["Pharmacy", "pharmacies", "a pharmacy"],
+  education_basic: ["School", "elementary and high schools", "an elementary or high school"],
+  education_higher: ["College", "colleges and universities", "a college or university"],
+  safety_police: ["Police station", "police stations", "a police station"],
+  safety_fire: ["Fire station", "fire stations", "a fire station"],
+  market_public: ["Public market", "public markets", "a public market"],
+  market_supermarket: ["Supermarket", "supermarkets", "a supermarket"],
+  finance_bank: ["Bank", "banks", "a bank"],
+};
+
+export const serviceName = (id: string): string => SERVICES[id]?.[0] ?? groupLabel(id);
+export const servicePlural = (id: string): string => SERVICES[id]?.[1] ?? groupLabel(id).toLowerCase();
+export const servicePhrase = (id: string): string => SERVICES[id]?.[2] ?? groupPhrase(id);
+
+/** Everyday names for the nine facility categories. */
+const FAC_NAMES: Record<string, string> = {
+  health: "Health",
+  pharmacy: "Pharmacy",
+  education: "Schools",
+  safety: "Police & fire",
+  government: "Government offices",
+  market: "Markets",
+  finance: "Banks",
+  transport: "Transport",
+  evacuation: "Evacuation centers",
+};
+/** The facility category of an indicator group ("health_hospital" -> "health"), for marker colours. */
+export const groupCategory = (id: string): string => id.split("_")[0] ?? id;
+
+export const facCatName = (c: string): string => FAC_NAMES[c] ?? facCatLabel(c);
+
+/** The reliability levels in everyday words, for the public pages. */
+export const CONFIDENCE: Record<string, [word: string, text: string]> = {
+  ok: ["Good", "The population and road data for this barangay are complete enough for these figures."],
+  caution: ["Fair", "Some population or road data here is less certain. The figures are a reasonable guide."],
+  low: ["Limited", "Population or road data here is uncertain, so the figures are rough and the barangay is not ranked."],
+  unverified: ["Unverified", "This data has not been checked."],
+  unknown: ["Unknown", "No confidence rating is available."],
+};
+
 export interface CategoryDef {
   id: A3Category;
   label: string;

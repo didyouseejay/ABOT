@@ -8,7 +8,8 @@ import { Badge, PageHeader, Panel, Rel } from "../components/ui.tsx";
 import type { LoadedBundle } from "../data/loadBundle.ts";
 import { fixed, formatUtc } from "../model/format.ts";
 import { auditView } from "../model/quality.ts";
-import { datasetState } from "../model/shell.ts";
+import { bundleStatusItems, datasetState } from "../model/shell.ts";
+import { InventoryTable } from "../components/InventoryTable.tsx";
 import type { DatasetKey } from "../routes.ts";
 import { barangaysOf, relCounts, relOf, svgPaths } from "../model/values.ts";
 import { useView } from "../view.tsx";
@@ -91,7 +92,7 @@ function audit(b: LoadedBundle) {
 
 function known(b: LoadedBundle) {
   return (
-    <Panel id="known" title="Known issues" sub={<>From <code>manifest.known_issues</code>; also listed under the provenance bar.</>}>
+    <Panel id="known" title="Known issues" sub={<>From <code>manifest.known_issues</code>; also summarised under Dataset status.</>}>
       {b.manifest.known_issues.length === 0 ? (
         <p className="small muted">The bundle lists no known issues.</p>
       ) : (
@@ -216,7 +217,7 @@ function reliability(b: LoadedBundle) {
   return (
     <Panel id="rel" title="Reliability across barangays" sub={`Low reliability excludes a barangay from ranks (${overall.low} low → ${nElig} eligible).`} codes={["DQ-SIMPLIFIED", "DQ-POP-ALLOC"]}>
       <div className="grid" style={{ margin: 0 }}>
-        <div className="span-5">
+        <div className="span-5 table-scroll">
           <table className="data-table data-table--compact">
             <caption className="visually-hidden">Barangays by reliability level</caption>
             <thead>
@@ -403,6 +404,34 @@ function QaPanel({ b }: { b: LoadedBundle }) {
   );
 }
 
+/** The bundle facts the old provenance bar showed on every page (moved here in M05.3). */
+function status(b: LoadedBundle) {
+  return (
+    <Panel id="status" title="Dataset status" sub="Read from the bundle; success is shown only for a verified, passed or clean state.">
+      <dl className="status-list">
+        {bundleStatusItems(b).map((i) => (
+          <div key={i.key}>
+            <dt>{i.label}</dt>
+            <dd>
+              <Badge tone={i.tone} title={i.detail}>
+                {i.value}
+              </Badge>
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </Panel>
+  );
+}
+
+function inventory(b: LoadedBundle) {
+  return (
+    <Panel id="inv" title="Facility inventory per indicator group" sub={`Counts of mapped OpenStreetMap features used for each group's travel times.${b.city.facility_inventory.every((r) => r["registry_reference"] === "none") ? " No group has been matched to an official registry." : ""}`} codes={["DQ-FAC-OSM", "DQ-DUP"]}>
+      <InventoryTable city={b.city} deep />
+    </Panel>
+  );
+}
+
 export function QualityPage({ bundle }: { bundle: LoadedBundle }) {
   const a = auditView(bundle.manifest.data_quality.source_validation.audit);
   const lead =
@@ -413,7 +442,10 @@ export function QualityPage({ bundle }: { bundle: LoadedBundle }) {
         : "What was checked, what passed, and what needs review. The audit was not run for this bundle.";
   return (
     <div className="page">
-      <PageHeader eyebrow="Reference" title="Data quality" lead={lead} />
+      <PageHeader eyebrow="For researchers" title="Data quality" lead={lead} />
+      <div className="grid">
+        <div className="span-12">{guard("The dataset status", () => status(bundle))}</div>
+      </div>
       <div className="grid">
         <div className="span-8">{guard("The audit result", () => audit(bundle))}</div>
         <div className="span-4">
@@ -427,6 +459,9 @@ export function QualityPage({ bundle }: { bundle: LoadedBundle }) {
       </div>
       <div className="grid">
         <div className="span-12">{guard("The reliability overview", () => reliability(bundle))}</div>
+      </div>
+      <div className="grid">
+        <div className="span-12">{guard("The facility inventory", () => inventory(bundle))}</div>
       </div>
       <div className="grid">
         <div className="span-12">{guard("The statements", () => statements(bundle))}</div>

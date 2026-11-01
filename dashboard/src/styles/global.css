@@ -1,3 +1,4 @@
-/* Stylesheet entry. Tokens: tokens.css; base, shell, components and pages: app.css. */
+/* Stylesheet entry. Tokens: tokens.css; base and researcher pages: app.css; shell and public pages: site.css. */
 @import "./tokens.css";
 @import "./app.css";
+@import "./site.css";

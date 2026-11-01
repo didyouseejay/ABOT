@@ -7,41 +7,18 @@ import type { ReactNode } from "react";
 import type { Issue, LoadedBundle } from "../../data/loadBundle.ts";
 import { DATASET_NAMES, datasetState } from "../../model/shell.ts";
 import type { DatasetKey } from "../../routes.ts";
-import { Badge, Icon } from "../ui.tsx";
+import { Icon } from "../ui.tsx";
 
 export function LoadingState() {
   return (
     <div className="loading state state--loading" role="status" aria-live="polite">
-      <p className="state__title">Loading the dashboard bundle</p>
-      <p className="small muted">About 10 MB, loaded once. Every file is checked against the manifest (size and SHA-256) before anything is shown.</p>
-      <div className="progress" role="progressbar" aria-label="Loading the bundle">
+      <p className="state__title">Loading the map data…</p>
+      <p className="small muted">This takes a few seconds the first time.</p>
+      <div className="progress" role="progressbar" aria-label="Loading the map data">
         <div className="progress__bar skeleton" style={{ width: "100%" }} />
       </div>
-      <ul className="dataset-list">
-        <li>
-          <code className="small">manifest.json</code>
-          <span>Manifest</span>
-          <Badge tone="info">Checking…</Badge>
-        </li>
-        {(Object.keys(DATASET_NAMES) as DatasetKey[]).map((k) => {
-          const [name, file] = splitName(DATASET_NAMES[k]);
-          return (
-            <li key={k}>
-              <code className="small">{file}</code>
-              <span>{name}</span>
-              <Badge tone="unknown">Waiting</Badge>
-            </li>
-          );
-        })}
-      </ul>
     </div>
   );
-}
-
-/** "Citywide values (city.json)" -> ["Citywide values", "city.json"]. */
-function splitName(s: string): [string, string] {
-  const m = /^(.*) \((.*)\)$/.exec(s);
-  return m ? [m[1] as string, m[2] as string] : [s, ""];
 }
 
 export function IssueList({ issues }: { issues: Issue[] }) {
@@ -60,10 +37,8 @@ export function IssueList({ issues }: { issues: Issue[] }) {
 export function FatalState({ issues }: { issues: Issue[] }) {
   return (
     <div className="state state--error" role="alert">
-      <h2 className="state__title">The dashboard bundle could not be loaded</h2>
-      <p>
-        No values are shown. Re-create the bundle with <code>abot export-dashboard</code>, then reload this page.
-      </p>
+      <h2 className="state__title">The dashboard data could not be loaded</h2>
+      <p>Please reload the page. If this keeps happening, the data files need to be prepared again (for the maintainer: run <code>abot export-dashboard</code>).</p>
       <IssueList issues={issues} />
     </div>
   );

@@ -1,25 +1,26 @@
 /*
- * ABOT design tokens. Restrained geospatial research palette: deep teal for identity, neutral
- * surfaces, and status colours that always come with a text label (colour is never the only cue).
+ * ABOT design tokens. Civic blue for identity, neutral surfaces, and status colours that always
+ * come with a text label (colour is never the only cue).
  * Text/background pairs below meet WCAG 2.1 AA (4.5:1) or better.
  *
- * Section A is the M05.2 S3 token set, unchanged except for the layout block (top navigation
- * replaces the sidebar). Section B holds the additions from the Claude Design prototype.
+ * Section A is the base token set (redesigned in M05.3 for a public audience). Section B holds the
+ * map ramps and the colours of the technical pages.
  */
 :root {
-  /* ---------- A. Existing tokens ---------- */
-  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Helvetica Neue", Arial, sans-serif;
+  /* ---------- A. Base tokens (M05.3: civic blue palette, Atkinson Hyperlegible) ---------- */
+  --font-sans: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", Arial, sans-serif;
   --font-mono: ui-monospace, "Cascadia Mono", "Segoe UI Mono", Consolas, "Liberation Mono", monospace;
   --font-size-xs: 0.8125rem;
-  --font-size-sm: 0.875rem;
+  --font-size-sm: 0.9375rem;
   --font-size-md: 1rem;
-  --font-size-lg: 1.125rem;
-  --font-size-xl: 1.375rem;
-  --font-size-2xl: 1.75rem;
+  --font-size-lg: 1.1875rem;
+  --font-size-xl: 1.5rem;
+  --font-size-2xl: 2rem;
+  --font-size-3xl: clamp(2rem, 1.4rem + 2.4vw, 3rem);
   --font-weight-regular: 400;
-  --font-weight-medium: 500;
-  --font-weight-bold: 650;
-  --line-height-tight: 1.25;
+  --font-weight-medium: 400;
+  --font-weight-bold: 700;
+  --line-height-tight: 1.2;
   --line-height-body: 1.55;
 
   --space-1: 0.25rem;
@@ -30,52 +31,58 @@
   --space-6: 2rem;
   --space-7: 2.5rem;
   --space-8: 3rem;
+  --space-9: 4rem;
 
-  --color-ink: #1b2a2f;
-  --color-ink-muted: #4a5a60;
+  --color-ink: #0f172a;
+  --color-ink-muted: #475569;
+  --color-ink-subtle: #64748b;
   --color-surface: #ffffff;
-  --color-surface-sunken: #f4f6f5;
-  --color-border: #d3dbd9;
-  --color-border-strong: #a9b6b4;
+  --color-surface-sunken: #f4f6fa;
+  --color-border: #e2e8f0;
+  --color-border-strong: #cbd5e1;
 
-  --color-brand: #0e4f5c;
-  --color-brand-strong: #0a3a44;
-  --color-brand-tint: #e6f1f2;
-  --color-on-brand: #f1f7f6;
-  --color-on-brand-muted: #b3cdcb;
-  --color-nav-active: #155e6b;
-  --color-nav-hover: #11505b;
-  --color-highlight: #ffd166;
+  --color-brand: #1e40af;
+  --color-brand-strong: #1e3a8a;
+  --color-brand-tint: #eff4ff;
+  --color-on-brand: #ffffff;
+  --color-on-brand-muted: #c7d2fe;
+  --color-nav-active: #1e3a8a;
+  --color-nav-hover: #eff4ff;
+  --color-highlight: #fbbf24;
+  --color-accent: #15803d;
+  --color-accent-strong: #166534;
 
-  --color-ok: #11632f;
-  --color-ok-bg: #e7f4ec;
-  --color-ok-border: #9fd3b2;
-  --color-warn: #7a4b00;
-  --color-warn-bg: #fff4dc;
-  --color-warn-border: #e6c37a;
-  --color-error: #a1121f;
-  --color-error-bg: #fdecee;
-  --color-error-border: #f0a3aa;
-  --color-unknown: #4a5a60;
-  --color-unknown-bg: #eef1f1;
-  --color-unknown-border: #c9d2d2;
-  --color-info: #0e4f5c;
-  --color-info-bg: #e6f1f2;
-  --color-info-border: #a7cfd3;
+  --color-ok: #166534;
+  --color-ok-bg: #ecfdf3;
+  --color-ok-border: #a7e3bd;
+  --color-warn: #8a4b00;
+  --color-warn-bg: #fff7e6;
+  --color-warn-border: #f2c97d;
+  --color-error: #b91c1c;
+  --color-error-bg: #fef2f2;
+  --color-error-border: #f5b5b5;
+  --color-unknown: #475569;
+  --color-unknown-bg: #f1f5f9;
+  --color-unknown-border: #cbd5e1;
+  --color-info: #1e40af;
+  --color-info-bg: #eff4ff;
+  --color-info-border: #bfcff7;
 
-  --focus-ring: 3px solid #1d6fd8;
+  --focus-ring: 3px solid #2563eb;
   --focus-ring-on-brand: 3px solid var(--color-highlight);
   --focus-offset: 2px;
 
   --border-width: 1px;
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --shadow-sm: 0 1px 2px rgb(16 40 45 / 0.08);
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+  --shadow-sm: 0 1px 2px rgb(15 23 42 / 0.06), 0 1px 3px rgb(15 23 42 / 0.05);
+  --ease: cubic-bezier(0.2, 0, 0, 1);
 
-  /* Layout (changed: --sidebar-width removed; --header-height renamed) */
-  --content-max: 80rem;
-  --topbar-height: 3.75rem;
-  --provenance-height: 2rem;
+  /* Layout */
+  --content-max: 72rem;
+  --topbar-height: 4rem;
 
   /* ---------- B. Additions ---------- */
 
@@ -83,33 +90,33 @@
   --font-numeric: tabular-nums lining-nums;
 
   /* Elevation for drawers and popovers (one step above --shadow-sm) */
-  --shadow-md: 0 4px 16px rgb(16 40 45 / 0.14), 0 1px 3px rgb(16 40 45 / 0.08);
+  --shadow-md: 0 10px 30px rgb(15 23 42 / 0.12), 0 2px 6px rgb(15 23 42 / 0.06);
 
-  /* Walking travel time ramp: 6 steps, single-hue sequential (light = short, dark = long).
-     Lightness falls monotonically, so it reads in greyscale and for deuteranopia/protanopia. */
-  --ramp-time-1: #fff2c2; /* 0–10 min  */
-  --ramp-time-2: #fdd486; /* 10–15 min */
-  --ramp-time-3: #f6a848; /* 15–30 min */
-  --ramp-time-4: #d9742b; /* 30–45 min */
-  --ramp-time-5: #a44a1f; /* 45–60 min */
-  --ramp-time-6: #5f2a14; /* > 60 min  */
-  /* No citywide time: neutral grey + hatch, never a ramp step */
-  --ramp-none: #c3c9ca;
-  --ramp-none-hatch: #7d8789;
+  /* Travel-time ramps (M05.3): blue = close, amber/orange = far. A blue–orange diverging scheme
+     stays readable for red–green colour blindness; every class also has a text label in the legend. */
+  --ramp-time-1: #1d4ed8; /* 0–10 min  */
+  --ramp-time-2: #60a5fa; /* 10–15 min */
+  --ramp-time-3: #fde68a; /* 15–30 min */
+  --ramp-time-4: #f59e0b; /* 30–45 min */
+  --ramp-time-5: #ea580c; /* 45–60 min */
+  --ramp-time-6: #9a3412; /* > 60 min  */
+  /* No time: neutral grey + hatch, never a ramp step */
+  --ramp-none: #cbd5e1;
+  --ramp-none-hatch: #94a3b8;
 
-  /* Driving time ramp: separate hue family, never shown with the walking ramp */
-  --ramp-drive-1: #efe7f4; /* 0–5 min   */
-  --ramp-drive-2: #cfbde1; /* 5–10 min  */
-  --ramp-drive-3: #a68bc6; /* 10–15 min */
-  --ramp-drive-4: #7556a3; /* 15–30 min */
-  --ramp-drive-5: #432a6e; /* > 30 min  */
+  /* Driving uses the same colour logic with its own breaks */
+  --ramp-drive-1: #1d4ed8; /* 0–5 min   */
+  --ramp-drive-2: #60a5fa; /* 5–10 min  */
+  --ramp-drive-3: #fde68a; /* 10–15 min */
+  --ramp-drive-4: #f59e0b; /* 15–30 min */
+  --ramp-drive-5: #c2410c; /* > 30 min  */
 
-  /* Share of all residents within N minutes, 0–100 % in 5 classes (dark = larger share) */
-  --ramp-share-1: #eef5f2; /*  0–20 % */
-  --ramp-share-2: #c3e0d6; /* 20–40 % */
-  --ramp-share-3: #84bfb0; /* 40–60 % */
-  --ramp-share-4: #3f8f86; /* 60–80 % */
-  --ramp-share-5: #145a5c; /* 80–100 % */
+  /* Share of residents within the time limit: orange = few, blue = most */
+  --ramp-share-1: #c2410c; /*  0–20 % */
+  --ramp-share-2: #f59e0b; /* 20–40 % */
+  --ramp-share-3: #fde68a; /* 40–60 % */
+  --ramp-share-4: #60a5fa; /* 60–80 % */
+  --ramp-share-5: #1d4ed8; /* 80–100 % */
 
   /* A3 population categories: colour + symbol (● ◆ ▲ ✕) + pattern on bars */
   --cat-network-connected: #2a7f8f;

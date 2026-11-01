@@ -11,7 +11,8 @@ import { guard, Unavailable } from "../components/states/States.tsx";
 import { Badge, CatSym, Check, Int, Num, NullValue, PageHeader, Panel, Role, Scen, SectionBand, Stamp, StatStrip } from "../components/ui.tsx";
 import type { Network } from "../contract/types.ts";
 import type { LoadedBundle } from "../data/loadBundle.ts";
-import { useLeaflet } from "../map/leaflet.ts";
+import { BasemapSwitcher } from "../map/BasemapSwitcher.tsx";
+import { useBasemapChoice, useBasemapLayer, useLeaflet } from "../map/leaflet.ts";
 import { fixed } from "../model/format.ts";
 import { CATEGORIES, componentClassLabel, underscores } from "../model/labels.ts";
 import { barangaysOf, boundsOf } from "../model/values.ts";
@@ -447,7 +448,7 @@ function FragmentMap({ bundle, n, bboxText }: { bundle: LoadedBundle; n: Network
   const boxes = useRef<LeafletNS.LayerGroup | null>(null);
   const handle = useLeaflet(el, boundsOf(brgy), (L, map) => {
     const outlines = brgy.filter((b) => b.geometry).map((b) => ({ type: "Feature" as const, geometry: b.geometry as never, properties: {} }));
-    L.geoJSON(outlines, { style: { color: "#0e4f5c", weight: 0.5, fillColor: "#fff", fillOpacity: 0.3 }, interactive: false }).addTo(map);
+    L.geoJSON(outlines, { style: { color: "#334155", weight: 0.5, fillColor: "#fff", fillOpacity: 0.15 }, interactive: false }).addTo(map);
     const box = L.layerGroup();
     for (const c of n.components) {
       if (c.fragment === "main" || c.geometry_kind !== "bounding_box" || !c.bbox) continue;
@@ -473,6 +474,8 @@ function FragmentMap({ bundle, n, bboxText }: { bundle: LoadedBundle; n: Network
     }).addTo(map);
     return box;
   });
+  const [basemap, setBasemap] = useBasemapChoice();
+  useBasemapLayer(handle, basemap);
   if (handle && boxes.current) {
     if (showBox && !handle.map.hasLayer(boxes.current)) boxes.current.addTo(handle.map);
     if (!showBox && handle.map.hasLayer(boxes.current)) handle.map.removeLayer(boxes.current);
@@ -485,7 +488,8 @@ function FragmentMap({ bundle, n, bboxText }: { bundle: LoadedBundle; n: Network
         </Check>
       </div>
       <div style={{ position: "relative", height: "28rem", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", overflow: "hidden" }}>
-        <div id="net-map" ref={el} style={{ position: "absolute", inset: 0, background: "#e3e9ea" }} role="region" aria-label="Map of fragment geometries; the component table below lists the same components" />
+        <div id="net-map" ref={el} style={{ position: "absolute", inset: 0 }} role="region" aria-label="Map of fragment geometries; the component table below lists the same components" />
+        <BasemapSwitcher id="bm-n" value={basemap} onChange={setBasemap} />
       </div>
     </>
   );
@@ -505,7 +509,7 @@ export function NetworkPage({ bundle }: { bundle: LoadedBundle }) {
   const analysis = statement("DQ-ANALYSIS-ONLY")?.text;
   return (
     <div className="page">
-      <PageHeader eyebrow="Reference · walk network evidence" title="Network connectivity" lead="How the walk network is split into components, and why some residents have no citywide time. Nothing on this page changes an indicator." />
+      <PageHeader eyebrow="For researchers · walk network evidence" title="Network connectivity" lead="How the walk network is split into components, and why some residents have no citywide time. Nothing on this page changes an indicator." />
       <div className="evidence-band" role="note">
         <strong>Evidence only.</strong> <Role k="evidence" /> <Role k="analysis" />
         <span>This page documents the network behind A3. A2, access tags and what-if scenarios appear only here and are never applied.</span>

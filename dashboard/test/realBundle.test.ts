@@ -82,16 +82,16 @@ describe.skipIf(!HAVE)("real bundle (read-only)", () => {
     const city = r.bundle.city;
     const a3 = city.walk.find((x) => x.indicator_id === "A3.walk.health_primary_care.pct_le15")?.value;
     expect(a3).not.toBeUndefined();
-    expect(ov).toContain(`${new Intl.NumberFormat("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(a3 as number)}&#8239;%`.replace("&#8239;", " "));
+    // the headline is the exported A3 value, rounded for reading
+    expect(ov).toContain(`<span class="headline__value">${new Intl.NumberFormat("en-PH", { maximumFractionDigits: 0 }).format(a3 as number)}%</span> of Iloilo City residents can walk to a health center or clinic within 15 minutes.`);
     expect(ov).toContain(new Intl.NumberFormat("en-PH").format(city.population.total));
-    // the distribution curve ends below 100 % and says so
-    expect(ov).toContain("all citywide times (incl. &gt; 60 min)");
-    expect(ov).toContain("no citywide time");
-    // every statement text on the page comes from the bundle verbatim
-    for (const s of r.bundle.manifest.statements.filter((x) => ov.includes(`id="note-${x.code}"`))) expect(ov).toContain(s.text.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/'/g, "&#x27;").replace(/</g, "&lt;").replace(/>/g, "&gt;"));
-    // ranks only for eligible barangays: the number of "not ranked" rows equals the ineligible count shown
+    // every statement text on a researcher page comes from the bundle verbatim
+    const me = render("methods", state);
+    for (const s of r.bundle.manifest.statements.filter((x) => me.includes(`id="note-${x.code}"`))) expect(me).toContain(s.text.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/'/g, "&#x27;").replace(/</g, "&lt;").replace(/>/g, "&gt;"));
+    // ranks only for eligible barangays: ineligible rows are listed in their own unranked group
     const br = render("barangays", state, false, { all: "1" });
     const inel = r.bundle.indicators.status === "ok" ? r.bundle.indicators.data.barangays.filter((x) => !x.data_quality.ranking_eligible).length : -1;
-    expect(br.match(/>not ranked</g)?.length ?? 0).toBe(inel);
+    expect(br.match(/class="not-ranked"/g)?.length ?? 0).toBe(inel);
+    if (inel > 0) expect(br).toContain(`Not ranked · limited data (${inel})`);
   });
 });
