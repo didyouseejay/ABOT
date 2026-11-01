@@ -14,3 +14,8 @@ data/
 cache/
 .ruff_cache/
 .pytest_cache/
+
+# Frontend (dashboard/) dependencies
+node_modules/
+# ...but not the dashboard source folder named data/ (the rule above matches any data/ directory)
+!/dashboard/src/data/

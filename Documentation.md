@@ -9,7 +9,12 @@ at the end**, newest first.
 - Repository: `abot` (Python package `abot`, v0.1.0)
 - Author: didyouseejay (carljohn.coopera@wvsu.edu.ph), West Visayas State University
 - Study area: Iloilo City, Iloilo, Western Visayas (Region VI), Philippines
-- Current state: **Milestone 04 + follow-up, uncommitted** (2026-10-31): component-aware (A3)
+- Current state: **Milestone 05.2 S0–S2, uncommitted** (2026-11-01): frontend foundation in
+  `dashboard/` (React + Vite + TypeScript) with a verified bundle loader; no dashboard page yet.
+  Before that, **Milestone 05.1** (2026-11-01): dashboard data exporter
+  `abot export-dashboard` (contract `abot-dashboard v1.0.0`) writes a validated, derived bundle to
+  `data/processed/dashboard/v1/`; no analytical result changed. Before that, **Milestone 04 +
+  follow-up** (2026-10-31): component-aware (A3)
   walking reporting layer added next to the unchanged baseline (A1, the optimistic connectivity
   scenario); access classification for reporting only; `e7_buffer_3km` originals removed after
   verified archiving; 7 approved duplicate classifications recorded (7 pending). The targeted
@@ -171,7 +176,7 @@ You can run single build stages with `abot build --only population osm`.
 
 | Module | Responsibility |
 |---|---|
-| [src/abot/cli.py](src/abot/cli.py) | Command-line entry point (`fetch`, `build`, `report`, `all`, `compare`, `review`, `validate`, `components`, `fetch-gaps`, `audit`) |
+| [src/abot/cli.py](src/abot/cli.py) | Command-line entry point (`fetch`, `build`, `report`, `all`, `compare`, `review`, `validate`, `components`, `fetch-gaps`, `audit`, `export-dashboard`) |
 | [src/abot/config.py](src/abot/config.py) | Loads [config/settings.yaml](config/settings.yaml), resolves data paths |
 | [src/abot/fetch/common.py](src/abot/fetch/common.py) | Streaming download in 1 MiB chunks, cache check, provenance manifest with SHA-256 |
 | [src/abot/fetch/sources.py](src/abot/fetch/sources.py) | Finds resources through the HDX CKAN API; WorldPop URL template |
@@ -195,6 +200,9 @@ You can run single build stages with `abot build --only population osm`.
 | [src/abot/fetch/targeted.py](src/abot/fetch/targeted.py) | Targeted Overpass query for the network gaps: build, validate, download only with `--allow-download`; snapshot evidence and link candidates (Milestone 04) |
 | [tests/test_m03.py](tests/test_m03.py) | Offline regression tests for Milestone 03 |
 | [tests/test_m04.py](tests/test_m04.py) | Offline regression tests for Milestone 04 |
+| [src/abot/dashboard_data.py](src/abot/dashboard_data.py) | Dashboard data bundle per [docs/DASHBOARD_DATA_CONTRACT.md](docs/DASHBOARD_DATA_CONTRACT.md): read-only over the outputs, audit gate, deterministic cell chunks, validation of the written files, temporary-directory install, `--check` staleness report (Milestone 05.1) |
+| [tests/test_m05.py](tests/test_m05.py) | Regression tests for Milestone 05.1 and its M05.2 S0 hardening (28 offline unit tests; 2 end-to-end tests that read the real outputs read-only, write only to a temporary directory and are skipped without data) |
+| [dashboard/](dashboard/) | Static frontend (Milestone 05.2): React 19 + Vite 8 + TypeScript 7 (strict). `vite/bundlePlugin.ts` serves the bundle in development (read per request, never watched) and copies it, hash-checked, into `dist/data/v1/` at build; `src/contract/` types and version check; `src/data/` loader, validation, SHA-256, React context; `src/model/` catalogue, scenario names, formatting, distribution view, audit/Git states; `test/` Vitest suite with a hand-made fixture bundle |
 
 ### Outputs (`data/processed/`)
 
@@ -211,6 +219,7 @@ You can run single build stages with `abot build --only population osm`.
 | `barangay_population.csv` | Per barangay: PSA 2020 census, census-adjusted total and anchoring factor, original WorldPop 2020/2026 (fractional and centre rule), cell counts, share from straddling cells |
 | `qa_report.md` | All validation checks (PASS / WARN / info) and data provenance |
 | `comparisons/<name>/` | Output of `abot compare` |
+| `dashboard/v1/` | Dashboard data bundle (`abot export-dashboard`, contract `abot-dashboard v1.0.0`): `manifest.json`, `city.json`, `barangays.geojson`, `barangay_indicators.json`, `cells-NNN.geojson` (chunks ≤ 4,000,000 bytes), `facilities.geojson`, `network.json`, `provenance.json`. Derived presentation data only; the files above stay authoritative |
 
 Column definitions: [docs/DATA_DICTIONARY.md](docs/DATA_DICTIONARY.md).
 | `abot_map.html` | Interactive map: travel-time and population choropleths, facility markers |
@@ -221,6 +230,13 @@ Column definitions: [docs/DATA_DICTIONARY.md](docs/DATA_DICTIONARY.md).
 - Key libraries (versions used): geopandas 1.2.0, osmnx 2.1.1, networkx 3.7, rasterio 1.5.2,
   shapely 2.2.0, pyproj 3.8.0, numpy 2.5.4, pandas 3.1.0, scipy 1.18.1, folium 0.20.0.
 - Dev tools: pytest, ruff. No dependencies were added in Milestone 02 or 02B.
+- Frontend (`dashboard/`, Milestone 05.2): Node 24.18.0, npm 10.8.1; versions pinned in
+  `dashboard/package.json` and `dashboard/package-lock.json`. Runtime: react 19.3.1, react-dom 19.3.1,
+  leaflet 1.9.4, react-leaflet 5.0.0, chart.js 4.6.1. Development: vite 8.3.5,
+  @vitejs/plugin-react 6.1.2, typescript 7.0.2, vitest 5.0.5, @types/react 19.3.0,
+  @types/react-dom 19.3.0, @types/leaflet 1.9.22, @types/node 24.19.2 (types only).
+- Run npm scripts from PowerShell or cmd. In the Git Bash used by the coding assistant,
+  `npm run …` exits 1 without output; `npx vite build` works there.
 - Hardware target: CPU-only laptop with 8 GB RAM. A full build from the cache takes about 40 s
   (3 km buffer) after the data has been downloaded (about 550 MB).
 
@@ -522,7 +538,7 @@ evacuation and transport are descriptive-only categories (see Section 8).
 | `abot audit` (3 km baseline) | M02B: PASS 50, WARN 3, FAIL 0, INFO 11. M03 (with the experiment-run checks): PASS 54, WARN 4 (pending reviews, Guimaras facilities, stale `e7_buffer_3km`), FAIL 0, INFO 11. M04: PASS 55 (new archive `hist_e7_buffer_3km_m02` verified), WARN 4, FAIL 0, INFO 11. M04 follow-up: PASS 57 (A3 layer current; review restore point verified), WARN 3 (`e7_buffer_3km` cleared; 7 duplicates still pending), FAIL 0, INFO 11 |
 | Determinism (M04 + follow-up) | `abot components` under `PYTHONHASHSEED` 0 and 12345: all 17 evidence files and the A3 CSVs byte-identical (A3 GeoPackage identical in content); A1 reproduces the saved baseline, and baseline file hashes are unchanged on every run |
 
-### Unit tests (200, offline, all passing; the 13 Milestone 01 tests are listed here, 40 Milestone 02 tests are in `tests/test_m02.py`, 32 Milestone 02B tests in `tests/test_m02b.py`, 18 Milestone 03 tests in `tests/test_m03.py`, 97 Milestone 04 tests in `tests/test_m04.py`)
+### Unit tests (230 Python, all passing; 55 Vitest tests in `dashboard/test/`, all passing; the 13 Milestone 01 tests are listed here, 40 Milestone 02 tests are in `tests/test_m02.py`, 32 Milestone 02B tests in `tests/test_m02b.py`, 18 Milestone 03 tests in `tests/test_m03.py`, 97 Milestone 04 tests in `tests/test_m04.py`, 30 Milestone 05 tests in `tests/test_m05.py`, 2 of which read the real outputs and are skipped without them)
 
 - Conversion from old PSGC codes to COD-AB p-codes (3 cases).
 - Merging of OSM query tags (lists and "any value").
@@ -789,6 +805,176 @@ uv run pytest           # offline unit tests
 
 Newest entries first. Each entry records the date, the milestone, what changed and why, files
 affected, and any effect on results. Future work is appended here as it is done.
+
+### 2026-11-01 — Milestone 05.2 S0–S2: contract clarifications, exporter hardening, frontend foundation and data loader (uncommitted)
+
+**Why:** M05.1 was accepted with discrepancies D1–D10. M05.2 starts with fixing them (S0), then the
+frontend foundation (S1) and the layer that loads and checks the bundle (S2). No dashboard page yet.
+
+**S0 — contract (`docs/DASHBOARD_DATA_CONTRACT.md`, still 1.0.0)**
+- D1: the frontend must show caveat texts from `manifest.statements`; components never retype them;
+  an unresolved code is a load error.
+- D3: `analysis_only` / `applied` are on every record of the three access tables.
+- D4: `data_quality.classification` is an identical copy of the top-level facility fields.
+- The outdated "wording may be refined at approval" heading is removed.
+- New §10.1.1 for D8: exactly which directories are exporter-owned, when a backup is restored or
+  removed, and when recovery stops for manual resolution.
+- Git fields now say `git status --porcelain -z`.
+- V-C1 now lists the independent recomputation it performs.
+
+**S0 — exporter (`src/abot/dashboard_data.py`, `tests/test_m05.py`)**
+- D6: Git status parsed from `--porcelain -z`; paths with spaces are kept literally, and a rename
+  counts once.
+- D7: V-C1 recomputes every bin, the open bin, every cumulative point and the final point from
+  `cells_a3` with plain masks, independently of the binning code.
+- D8:
+  - every failed check is printed, with no 200-message cap;
+  - recovery touches only `.v1.tmp-<12 hex>` / `.v1.old-<12 hex>`;
+  - a backup is deleted only when `v1/` verifies completely;
+  - several or incomplete backups stop the export.
+- D9: when `v1/` is missing, `--check` reports each backup, says whether it is complete, and says
+  whether the next export restores it.
+- 12 regression tests added. The recovery tests were rewritten for the ownership rule.
+- The bundle was regenerated with the hardened exporter (all checks pass).
+- `.gitignore`: `node_modules/`, and the exception `!/dashboard/src/data/`. The existing unanchored
+  `data/` rule also matched the loader folder `dashboard/src/data/`, which would otherwise never be
+  committed. `/data/` and `dashboard/dist/` stay ignored.
+
+**S1 — `dashboard/`**
+- Vite + React + strict TypeScript; hash routing with no router library; no backend.
+- `vite/bundlePlugin.ts`:
+  - in development, each file is read per request and nothing is watched;
+  - at build, only the manifest's files are copied, each size- and hash-checked.
+- Verified:
+  - `abot export-dashboard` ran successfully while the dev server was running (Windows directory
+    renames not blocked);
+  - the dev server refuses paths outside the bundle (404);
+  - the build copies the 9 files byte-identically.
+
+**S2 — data layer**
+- Contract types and version check:
+  - another contract ID or major version is refused;
+  - a newer minor version gives a warning;
+  - an older minor or any patch difference is compatible.
+- The loader checks each file's size and SHA-256 (or reports verification as unavailable), its
+  envelope and its shared `generated_utc`.
+- The cells are rebuilt in chunk order; any problem disables the cell layer and it is never partial.
+- Validation also covers:
+  - indicator IDs and their levels against the catalogue;
+  - statement codes;
+  - the distribution shape;
+  - the audit state;
+  - the facility classification copy.
+- Values pass through unchanged; null stays null.
+- Fixture bundle and 55 Vitest tests, including one read-only test on the real bundle.
+
+**Files:** `docs/DASHBOARD_DATA_CONTRACT.md`, `src/abot/dashboard_data.py`, `tests/test_m05.py`,
+`.gitignore`, this file, and new `dashboard/**` (excluding `node_modules/` and `dist/`, which are
+ignored).
+
+**Effect on results:** none. No analytical output, raw file or archive changed; the bundle was
+regenerated from unchanged sources.
+
+### 2026-11-01 — Milestone 05.1: dashboard data exporter `abot export-dashboard` (uncommitted)
+
+**Why:** M05 needs the contract of M05.0 implemented as a reproducible, validated bundle that a static
+frontend can load without re-deriving any result.
+
+**Approved decisions applied first (contract, documentation only)**
+- Audit gate (Q3):
+  - `pass` and `warn` allow the export; `warn` is kept in the bundle as known issue `AUDIT-WARN`.
+  - `fail` and `error` block it: nothing is written and the previous bundle is kept.
+  - `not_run` happens only with `--skip-audit` and is recorded as `AUDIT-NOT-RUN`.
+  - Checked by the new rule V-A1; the command line is documented in §10.3.
+- Distribution (Q5): fixed 60-minute cap with an open "> 60 min" bin.
+  - The cumulative series now ends with a point that includes the open bin, so those residents are
+    in the bins, the cumulative curve and the totals (hospital at discovery: 19,602.6 residents above
+    60 min).
+- `manifest.statements` added. Statement codes had no texts anywhere in the bundle; additive, not a
+  breaking change.
+
+**Added**
+- `src/abot/dashboard_data.py` and the `abot export-dashboard [--skip-audit] [--check]` command in
+  `src/abot/cli.py`.
+- What the exporter does:
+  - hashes the 31 source files of contract §7.1.1 and runs V-S2–V-S4;
+  - runs the existing `abot.audit.Audit` in-process (read-only, no reimplementation);
+  - builds the 8 datasets in memory and splits the cells into chunks under 4,000,000 bytes, in
+    `cell_id` order;
+  - writes everything into `data/processed/dashboard/.v1.tmp-*`, re-reads the files and runs every
+    §10.2 check on them;
+  - re-hashes the sources (V-X1), then swaps the directory into `v1/` with two renames.
+- `--check` reports staleness and writes nothing. An experiment configuration is refused.
+- `tests/test_m05.py`: 18 tests. They cover:
+  - serialisation and nulls;
+  - right-closed bins and the open bin;
+  - chunk rule;
+  - audit states and gate;
+  - display geometry wrapping, and that an invalid geometry fails instead of being repaired;
+  - catalogue typing;
+  - install and crash recovery;
+  - `--check`;
+  - export blocked by a failed audit, and a failed validation that keeps the previous bundle.
+
+**Bundle at export (2026-10-31T22:47 UTC)**
+- 9 files, 10,186,866 bytes:
+
+  | File | Bytes |
+  |---|---|
+  | `cells-001.geojson` (4,018 cells) | 3,469,352 |
+  | `cells-002.geojson` (4,017 cells) | 3,469,534 |
+  | `barangay_indicators.json` | 1,764,729 |
+  | `facilities.geojson` | 808,641 |
+  | `manifest.json` | 177,393 |
+  | `barangays.geojson` | 183,593 |
+  | `network.json` | 171,498 |
+  | `city.json` | 107,198 |
+  | `provenance.json` | 34,928 |
+
+  The single-file cell form would be 6,937,203 bytes.
+- 303 catalogue entries (202 barangay-level, 231 city-level).
+- Audit `obtained` / `warn` (58 pass, 3 warn, 0 fail, 11 info); known issues `AUDIT-WARN`,
+  `GIT-DIRTY`.
+- Repeatability: two exports from the same sources were compared after setting aside the fields that
+  depend on the run itself: `generated_utc`, the audit `ran_utc`, and every `sha256` of a bundle file
+  (each file embeds `generated_utc`, so its hash changes from run to run). With those fields set aside,
+  all 9 files were identical, and so were their sizes. The bytes on disk are therefore not identical
+  between runs; the content is.
+- Every source file and the rest of `data/` are byte-identical before and after (299 entries
+  compared).
+
+**Files:** `src/abot/dashboard_data.py` (new), `src/abot/cli.py`, `tests/test_m05.py` (new),
+`docs/DASHBOARD_DATA_CONTRACT.md`, this file. No dependency added.
+
+**Effect on results:** none. No A1/A2/A3 value, network, population, classification or review decision
+changed; the bundle is derived data and the sources remain authoritative (R1).
+
+### 2026-11-01 — Milestone 05.0: final review of the dashboard data contract (documentation only; uncommitted)
+
+**Why:** before implementation, the contract was checked against the outputs and the code, not only
+proofread.
+
+**Changes to `docs/DASHBOARD_DATA_CONTRACT.md` (still 1.0.0)**
+- Q1: 2e-5° is an angle in EPSG:4326, not a displacement bound (measured median 2.0 m, max 3.9 m);
+  polygons are wrapped as MultiPolygon; display only.
+- Q3: the audit is called in-process; it was verified read-only.
+- Q9: one file would be 6.94 MB, so the cells are written as deterministic chunks.
+- Q5: the bin rule is now unambiguous.
+- Corrections:
+  - `relation/` facility IDs (36) were missing;
+  - R5 counts corrected;
+  - `pct_not_connected` rounding (2 decimals);
+  - M03 `n_edges` counts directed edges, so it is taken from the inventory;
+  - a missing gap-evidence field added;
+  - "absent" fields made `null`;
+  - catalogue IDs with mixed units split;
+  - the A1 drive label separated from the walking label;
+  - frontend staleness claims removed;
+  - Windows-safe two-rename install;
+  - figures in statements are now filled from the sources;
+  - complete source-file list (§7.1.1).
+
+**Effect on results:** none.
 
 ### 2026-10-31 — Milestone 05.0: dashboard data contract `abot-dashboard v1.0.0` (documentation only; uncommitted)
 

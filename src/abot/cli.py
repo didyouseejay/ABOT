@@ -1,4 +1,5 @@
-"""Command-line entry point: `abot fetch | build | report | all | compare | review | validate | audit`."""
+"""Command-line entry point: `abot fetch | build | report | all | compare | review | validate | components |
+fetch-gaps | audit | export-dashboard`."""
 
 from __future__ import annotations
 
@@ -80,6 +81,19 @@ def main(argv: list[str] | None = None) -> None:
     p_aud.add_argument(
         "--skip-hashes", action="store_true", help="skip SHA-256 checks of raw and archived files"
     )
+    p_exp = sub.add_parser(
+        "export-dashboard",
+        help="write the dashboard data bundle to <processed>/dashboard/v1 (contract abot-dashboard 1.0.0); "
+        "read-only over the analytical outputs",
+    )
+    p_exp.add_argument(
+        "--skip-audit", action="store_true", help="export without running `abot audit` (recorded as not_run)"
+    )
+    p_exp.add_argument(
+        "--check",
+        action="store_true",
+        help="only report whether the existing bundle is stale; writes nothing",
+    )
 
     args = parser.parse_args(argv)
     logging.basicConfig(
@@ -93,6 +107,14 @@ def main(argv: list[str] | None = None) -> None:
         # Read-only: no directory is created, nothing under data/ is written.
         s = load_settings(args.config, create_dirs=False)
         sys.exit(audit.run(s, Path(args.config), args.output, hashes=not args.skip_hashes))
+    if args.command == "export-dashboard":
+        from abot import dashboard_data
+
+        # Read-only over data/: only <processed>/dashboard/ is written, and nothing at all with --check.
+        s = load_settings(args.config, create_dirs=False)
+        if args.check:
+            sys.exit(dashboard_data.check(s))
+        sys.exit(dashboard_data.export(s, Path(args.config), skip_audit=args.skip_audit))
     s = load_settings(args.config)
 
     if args.command in ("fetch", "all"):
