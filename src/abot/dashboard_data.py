@@ -1,4 +1,4 @@
-"""`abot export-dashboard`: the static dashboard data bundle (contract `abot-dashboard v1.0.0`).
+"""`abot export-dashboard`: the static dashboard data bundle (contract `abot-dashboard v1.0.1`).
 
 docs/DASHBOARD_DATA_CONTRACT.md is the authority; section and rule numbers below refer to it. The
 exporter is read-only over the analytical outputs: it selects, renames, reshapes, reprojects and rounds
@@ -33,7 +33,7 @@ from abot.config import Settings
 from abot.fetch.common import sha256
 from abot.fetch.targeted import LAT_RANGE, LON_RANGE
 
-CONTRACT, CONTRACT_VERSION = "abot-dashboard", "1.0.0"
+CONTRACT, CONTRACT_VERSION = "abot-dashboard", "1.0.1"
 BUNDLE = "v1"
 MAX_FILE_BYTES = 4_000_000  # §5.1: uncompressed bytes as written
 BIN_WIDTH_MIN, CLOSED_MAX_MIN = 1, 60  # §7.2 walk_distribution (Q5)
@@ -126,6 +126,11 @@ A3B, A3C, A1B = (
     "barangay_access.csv",
 )
 DS = "drive_speed_sensitivity.csv"
+# The targeted gap snapshot (`abot fetch-gaps --allow-download`) is optional evidence: it never changes a
+# component class or an indicator. `abot components` declares on every run whether it used one
+# (snapshot_status.json) and writes the corridor table only then.
+SNAPSHOT_STATUS, CORRIDORS = "snapshot_status.json", "snapshot_corridor_analysis.csv"
+CORRIDOR_COLUMNS = ["fragment", "path_ways", "path_gates", "classification_reason", "applied"]
 
 
 class ExportError(Exception):
@@ -214,7 +219,8 @@ def source_paths(s: Settings, config_path: Path) -> list[tuple[Path, list[str]]]
         (m04 / "transition_A1_to_A3_pop.csv", ["network.transition_a1_to_a3"]),
         (m04 / "component_inventory.csv", ["network.components", "network.component_classes"]),
         (m04 / "gap_investigation.csv", ["network.gap_evidence"]),
-        (m04 / "snapshot_corridor_analysis.csv", ["network.gap_evidence"]),
+        (m04 / SNAPSHOT_STATUS, ["targeted snapshot used or not (V-S5)"]),
+        *([(m04 / CORRIDORS, ["network.gap_evidence"])] if snapshot_declared(m04) is not False else []),
         (m04 / "access_classification_summary.csv", ["network.access_classification"]),
         (m04 / "access_impact.csv", ["network.access_impact"]),
         (m04 / "access_impact_by_group.csv", ["network.access_impact_by_group"]),
@@ -226,6 +232,26 @@ def source_paths(s: Settings, config_path: Path) -> list[tuple[Path, list[str]]]
         (Path(config_path), ["indicator groups, thresholds", "config_sha256"]),
     ]
     return out
+
+
+def snapshot_declared(m04: Path) -> bool | None:
+    """`obtained` of review/m04/snapshot_status.json; None when missing or not a boolean (V-S1/V-S5 report it)."""
+    try:
+        v = json.loads((m04 / SNAPSHOT_STATUS).read_text(encoding="utf-8")).get("obtained")
+    except (OSError, ValueError, AttributeError):
+        return None
+    return v if isinstance(v, bool) else None
+
+
+def load_corridors(m04: Path) -> pd.DataFrame:
+    """The corridor table; empty when no snapshot is declared, or when the snapshot had no link candidate
+    (`abot components` then writes a file without columns). Consistency is checked by V-S5."""
+    if snapshot_declared(m04) is False:
+        return pd.DataFrame(columns=CORRIDOR_COLUMNS)
+    try:
+        return pd.read_csv(m04 / CORRIDORS)
+    except pd.errors.EmptyDataError:
+        return pd.DataFrame(columns=CORRIDOR_COLUMNS)
 
 
 @dataclass
@@ -254,6 +280,7 @@ class Sources:
     imp: pd.DataFrame
     impg: pd.DataFrame
     taxonomy: dict
+    snapshot_status: dict
     run_info: dict
     run_meta: dict
     osm_prov: dict
@@ -294,11 +321,12 @@ def load(s: Settings) -> Sources:
         trans=pd.read_csv(m04 / "transition_A1_to_A3_pop.csv"),
         comp=pd.read_csv(m04 / "component_inventory.csv"),
         gapinv=pd.read_csv(m04 / "gap_investigation.csv"),
-        corr=pd.read_csv(m04 / "snapshot_corridor_analysis.csv"),
+        corr=load_corridors(m04),
         acs=pd.read_csv(m04 / "access_classification_summary.csv"),
         imp=pd.read_csv(m04 / "access_impact.csv"),
         impg=pd.read_csv(m04 / "access_impact_by_group.csv"),
         taxonomy=js(m04 / "taxonomy_check.json"),
+        snapshot_status=js(m04 / SNAPSHOT_STATUS),
         run_info=js(P / "component_aware" / "run_info.json"),
         run_meta=js(INTERIM / "run_meta.json"),
         osm_prov=js(INTERIM / "osm_provenance.json"),
@@ -307,8 +335,35 @@ def load(s: Settings) -> Sources:
     )
 
 
+def snapshot_checks(s: Settings, src: Sources) -> list[str]:
+    """V-S5: the targeted-snapshot evidence is used as `abot components` declared it, or not at all."""
+    st, m04 = src.snapshot_status, s.processed_dir / "review" / "m04"
+    obtained = st.get("obtained")
+    rerun = ": re-run `abot components`"
+    if not isinstance(obtained, bool):
+        return [f"V-S5: {SNAPSHOT_STATUS} has no boolean `obtained`{rerun}"]
+    bad = []
+    if not obtained and (m04 / CORRIDORS).exists():
+        bad.append(f"V-S5: no targeted snapshot declared, but {CORRIDORS} exists from another run{rerun}")
+    if obtained and src.corr.empty and st.get("link_candidates") != 0:
+        bad.append(f"V-S5: snapshot declared with {st.get('link_candidates')} link candidate(s), "
+                   f"but {CORRIDORS} is empty{rerun}")  # fmt: skip
+    gap = set(src.gapinv["snapshot_obtained"].astype(bool)) if "snapshot_obtained" in src.gapinv else set()
+    if gap != {obtained}:
+        bad.append(f"V-S5: gap_investigation.csv snapshot_obtained {sorted(gap)} differs from {SNAPSHOT_STATUS} "
+                   f"obtained={obtained}{rerun}")  # fmt: skip
+    # provenance.targeted_snapshot names the latest osm_targeted/ manifest entry: it must be the one used
+    targeted = [e for p, e in src.raw_manifest.items() if p.startswith("osm_targeted/")]
+    latest = targeted[-1].get("sha256") if targeted else None
+    used = st.get("response_sha256") if obtained else None
+    if latest != used:
+        bad.append(f"V-S5: latest targeted snapshot in data/raw/manifest.json ({str(latest)[:12]}) is not the one "
+                   f"`abot components` used ({str(used)[:12]}){rerun}")  # fmt: skip
+    return bad
+
+
 def source_checks(s: Settings, src: Sources) -> list[str]:
-    """V-S2, V-S3, V-S4 (V-S1 is checked before loading)."""
+    """V-S2, V-S3, V-S4, V-S5 (V-S1 is checked before loading)."""
     bad = []
     for f, h in src.run_info["baseline_sha256"].items():
         p = s.processed_dir / f
@@ -324,7 +379,7 @@ def source_checks(s: Settings, src: Sources) -> list[str]:
     t = src.taxonomy
     if not (t.get("identical") is True and t.get("components_compared") == 112):
         bad.append(f"V-S4: taxonomy_check {t.get('identical')}, {t.get('components_compared')} components")
-    return bad
+    return bad + snapshot_checks(s, src)
 
 
 # --- audit (§6.1.1) -------------------------------------------------------------------------------

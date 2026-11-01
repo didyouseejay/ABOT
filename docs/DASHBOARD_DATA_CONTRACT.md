@@ -1,13 +1,13 @@
-# ABOT dashboard data contract — `abot-dashboard v1.0.0`
+# ABOT dashboard data contract — `abot-dashboard v1.0.1`
 
 | | |
 |---|---|
-| **Contract** | `abot-dashboard`, version **1.0.0** |
-| **Date** | 2026-10-31; final M05.0 review 2026-11-01 |
+| **Contract** | `abot-dashboard`, version **1.0.1** (patch of 1.0.0; see §14 Revisions) |
+| **Date** | 2026-10-31; final M05.0 review 2026-11-01; 1.0.1 on 2026-11-02 (M06.2A) |
 | **Status** | Approved; implemented by `abot export-dashboard` (M05.1). Frontend M05.2 in progress |
 | **Bundle location** | `data/processed/dashboard/v1/` (git-ignored, like all of `data/`) |
 | **Producer (future)** | `abot export-dashboard` (M05.1), Python, read-only over the analytical outputs |
-| **Consumer (future)** | static React + Vite + Leaflet + Chart.js app (M05.2+), no API or database |
+| **Consumer (future)** | static React + Vite + Leaflet app (M05.2+; Chart.js was planned but not used), no API or database |
 | **Basis** | M05 discovery report (2026-10-31): every source field named below was read from the generated files of commit `56a934c`. Final review (2026-11-01, HEAD `5ed16d2`, a documentation-only commit): every count, identity and source path was re-checked read-only against the same outputs and against `src/abot/` (`accessibility.py`, `components.py`, `audit.py`, `cli.py`, `config.py`, `qa.py`, `fetch/targeted.py`) |
 
 The key words **MUST**, **MUST NOT** and **SHOULD** are normative. Figures marked "at discovery" are
@@ -416,7 +416,9 @@ complete list (V-S1); the exporter reads nothing else for bundle content (R13).
 | `abot_iloilo.gpkg` layers `barangays`, `access_cells`, `facilities`, `facility_roles` | barangay geometry, A1 cell part, facilities; whole file hashed for V-S2 |
 | `review/possible_duplicates_review.csv` | facility duplicate review, `DQ-DUP` |
 | `review/m03/validation.gpkg` layers `network_fragments`, `fragment_gaps` | 9 fragment geometries |
-| `review/m04/facilities_by_approach.csv`, `approach_comparison.csv`, `transition_A1_to_A3_pop.csv`, `component_inventory.csv`, `gap_investigation.csv`, `snapshot_corridor_analysis.csv`, `access_classification_summary.csv`, `access_impact.csv`, `access_impact_by_group.csv`, `taxonomy_check.json` | `network.json`, facility `off_main_network_in`, V-S4 |
+| `review/m04/facilities_by_approach.csv`, `approach_comparison.csv`, `transition_A1_to_A3_pop.csv`, `component_inventory.csv`, `gap_investigation.csv`, `access_classification_summary.csv`, `access_impact.csv`, `access_impact_by_group.csv`, `taxonomy_check.json` | `network.json`, facility `off_main_network_in`, V-S4 |
+| `review/m04/snapshot_status.json` | whether `abot components` used a targeted gap snapshot (`obtained`), V-S5 (1.0.1) |
+| `review/m04/snapshot_corridor_analysis.csv`, **only when** `snapshot_status.obtained` is true | `gap_evidence` path fields (1.0.1: conditional; an empty file without columns, written for a snapshot with no link candidate, is read as no rows) |
 | `data/interim/run_meta.json`, `data/interim/osm_provenance.json`, `data/interim/qa/*.json` | provenance, V-S3 |
 | `data/raw/manifest.json` | `provenance.sources` |
 | `config/settings.yaml` | groups, thresholds, `config_sha256` |
@@ -639,7 +641,7 @@ population transition (`descriptive`). All sources are in `review/m04/` unless s
 | `component_classes` | `array<{component_class, components, length_km, pop_attached_A3}>` | grouped from `component_inventory.csv` | counts and sums of the 112-row table (R2) |
 | `components` | `array<{fragment, component_class, class_reason, length_km, km_inside_city, n_nodes, n_edges, gap_to_main_m, gap_crosses_water \| null, noexit_at_gap, retained_A2, retained_A3, cells_attached_A3, pop_attached_A3, pop_internal_health_primary_care_reachable, pop_internal_education_basic_reachable, km_no, km_private, km_residents, km_customers, km_unknown, km_destination, km_pedestrian_override, km_untagged, km_public, gates_restricted, gates_untagged, bbox: {lon_min, lat_min, lon_max, lat_max}, geometry_kind: "bounding_box"}>` | `component_inventory.csv` | `bbox` from the source `lon_*`/`lat_*` (EPSG:4326, 6 decimals) |
 | `fragment_geometries` | GeoJSON FeatureCollection: 9 features `geometry_kind: "mapped_fragment_geometry"`, properties `{fragment, n_edges, length_km, gap_to_main_m}`, + 9 `gap_line` features (`geometry_kind: "gap_line"`, properties `{fragment, gap_to_main_m}`) | `review/m03/validation.gpkg` › `network_fragments` (9, MultiLineString) and `fragment_gaps` (9, LineString), EPSG:32651 → 4326 | only 9 fragments; see §8.4. `n_edges` and `length_km` are taken from `component_inventory.csv`: the M03 layer's `n_edges` counts directed edges (exactly twice the inventory value) and is not exported |
-| `gap_evidence` | `array<{fragment, component_class, component_class_changed_by_snapshot, cache_*…, snapshot_physical_connection, snapshot_link_m, snapshot_link_ways, snapshot_link_access_tags, snapshot_link_gates, snapshot_corridor_gates, snapshot_public_pedestrian_access, snapshot_path_access_status, snapshot_public_pedestrian_status, snapshot_authorized_group, snapshot_field_verification_required, remaining_unverified, path_ways, path_gates, classification_reason, applied: false}>` | `gap_investigation.csv` (+ `snapshot_corridor_analysis.csv` joined on `fragment`, one row each, for `path_ways`, `path_gates`, `classification_reason`, `applied`) | F001, F100, F101; physical connection, mapped path access, public pedestrian status and authorised group kept in separate fields |
+| `gap_evidence` | `array<{fragment, component_class, component_class_changed_by_snapshot, cache_*…, snapshot_physical_connection, snapshot_link_m, snapshot_link_ways, snapshot_link_access_tags, snapshot_link_gates, snapshot_corridor_gates, snapshot_public_pedestrian_access, snapshot_path_access_status, snapshot_public_pedestrian_status, snapshot_authorized_group, snapshot_field_verification_required, remaining_unverified, path_ways, path_gates, classification_reason, applied: false}>` | `gap_investigation.csv` (+ `snapshot_corridor_analysis.csv` joined on `fragment`, one row each, for `path_ways`, `path_gates`, `classification_reason`, `applied`) | F001, F100, F101; physical connection, mapped path access, public pedestrian status and authorised group kept in separate fields. Without a corridor row for a fragment (no targeted snapshot, or no link candidate) `path_ways`, `path_gates` and `classification_reason` are `null` and `applied` is false; without a snapshot `snapshot_physical_connection` is `not_examined` and `remaining_unverified` says so |
 | `access_classification` | `array<{kind, access_class, public_pedestrian_status, treatment, ways, edges, km, km_main, components, cells_attached_A1, pop_attached_A1, nodes, nodes_flag_for_review, nodes_field_verification, nodes_main}>` (nullable per `kind`) | `access_classification_summary.csv` | `analysis_only: true` |
 | `access_impact` | `array<{scenario, definition, ways_all_components, km_all_components, edges_removed_main, km_removed_main, pop_lose_network, pop_become_local, pop_become_unconnected, pop_time_up_gt1min, pop_lose_network_focus \| null}>` and `access_impact_by_group` (`scenario, group, pct_le15_baseline, pct_le15_scenario, mean_min_baseline, mean_min_scenario`) | `access_impact.csv`, `access_impact_by_group.csv` | `analysis_only: true`, `applied: false` |
 
@@ -660,7 +662,7 @@ and `applied: false` after its source fields (R12, V-Q2). `gap_evidence` records
 |---|---|---|
 | `sources` | `array<{path, url, licence, retrieved_utc, bytes, sha256, source \| null, release \| null, year \| null, hdx_dataset \| null, hdx_last_modified \| null, timestamp_osm_base \| null, overpass_timestamp_osm_base \| null, query_file \| null, query_sha256 \| null, query_label \| null, boundary_buffer_m \| null, used_by_runs \| null}>` | `data/raw/manifest.json` (14 entries; fields vary by source: absent → null). Recorded values, not re-hashed by the exporter |
 | `osm` | `{osmnx_version, overpass_endpoint, boundary_buffer_m, responses: array<{label, cache_file, overpass_timestamp_osm_base, elements, sha256}>}` | `data/interim/osm_provenance.json` |
-| `targeted_snapshot` | `{file, sha256, timestamp_osm_base, used_for: "evidence only"}` | manifest entry `osm_targeted/…` |
+| `targeted_snapshot` | `{file, sha256, timestamp_osm_base, used_for: "evidence only"}` \| `null` | latest manifest entry `osm_targeted/…`; `null` when no targeted snapshot was used (the v1.0.0 exporter already wrote `null` then; documented in 1.0.1). V-S5 guarantees it is the snapshot `abot components` used |
 | `qa` | per file `{check: {ok: boolean \| null, value, note}}` | every `data/interim/qa/*.json` (5 at discovery: `boundaries`, `population`, `osm`, `accessibility`, `provenance`) |
 | `audit` | `source_validation` object of §6.1 | exporter |
 | `limitations` | `array<{code, text}>` | §11 of this contract (fixed text; figures filled from sources as in §6.3) |
@@ -807,6 +809,7 @@ the ones stated; "equal" without a tolerance means exactly equal after JSON roun
 | V-S2 | `run_info.baseline_sha256` equals the SHA-256 of each listed baseline file on disk (6 files at discovery, all matching at review). |
 | V-S3 | `config_sha256` equal across the current config, `run_meta.json` (all stages) and `run_info.json`. |
 | V-S4 | `review/m04/taxonomy_check.json` reports `identical: true` and `components_compared: 112`. |
+| V-S5 | (1.0.1) The targeted gap snapshot is used exactly as `review/m04/snapshot_status.json` declares: `obtained` is a boolean; no corridor table is present when it is false; the corridor table is non-empty unless the status records 0 link candidates; `gap_investigation.snapshot_obtained` equals `obtained` on every row; the latest `osm_targeted/` entry of `data/raw/manifest.json` is the snapshot that was used (`response_sha256`), or there is none when `obtained` is false. Any mismatch blocks the export with "re-run `abot components`". |
 | V-P1 | Population: Σ `cells_a3.pop` = Σ `access_cells.pop` = Σ `barangay_access_a3.pop_total` = Σ `barangay_access.pop_total` = `run_info.population_total` (±0.5). |
 | V-P2 | Per barangay: Σ four A3 category pops = `pop_total` (±0.5); A3 and A1 `pop_total` equal (±0.05). |
 | V-P3 | A3 `pct_*` categories sum to 100 ± 0.02 per barangay and citywide. |
@@ -898,3 +901,16 @@ is role-level (§7.6, reproduces the inventory for all 10 groups); `n_{group}` c
 - **Major** (x.0.0): renamed, removed or re-typed fields, or changed meaning of any indicator,
   denominator or null. The bundle directory follows the major version (`v1/`, `v2/`).
 - The number of cell chunks follows from the data size (§7.5.1) and is not a version change.
+
+**Revisions**
+- **1.0.1** (2026-11-02, Milestone 06.2A; patch).
+  - The targeted gap snapshot (`abot fetch-gaps --allow-download`) becomes optional, declared
+    evidence: §7.1.1 reads `snapshot_status.json` and the corridor table only when a snapshot was
+    used.
+  - New validation V-S5.
+  - `provenance.targeted_snapshot` and the `gap_evidence` path fields are documented as `null`
+    without a snapshot, which v1.0.0 code already produced.
+  - No field is added, renamed or re-typed in output that a 1.0.0 client reads, and no indicator
+    changes. The snapshot never affects a component class or indicator: the A3 layer is written
+    before `abot components` reads it, and a run without it gives byte-identical A3 files.
+- **1.0.0** (2026-10-31): first release.

@@ -68,7 +68,7 @@ deserves field verification. They are not intended for allocating resources on t
   ranking-eligible barangays are ranked.
 - **Read-only audit** (`abot audit`) with PASS/WARN/FAIL checks of inputs, staleness and
   consistency. A FAIL blocks the dashboard export.
-- **Versioned, verified data bundle.** Contract `abot-dashboard` 1.0.0, with SHA-256 checked at
+- **Versioned, verified data bundle.** Contract `abot-dashboard` 1.0.1, with SHA-256 checked at
   export, at build and in the browser. A failed dataset degrades only its own panels.
 - **Static dashboard** with eight pages. It needs no server, API or database to run.
 
@@ -139,7 +139,7 @@ flowchart LR
   S["Open data<br/>COD-AB · PSA 2020 · WorldPop · OpenStreetMap"] --> P["Python pipeline<br/>fetch → build → components → audit"]
   P --> G["Authoritative outputs<br/>GeoPackage + CSVs"]
   G --> E["abot export-dashboard<br/>audit gate · validation · SHA-256 manifest"]
-  E --> B["Static JSON bundle<br/>abot-dashboard 1.0.0"]
+  E --> B["Static JSON bundle<br/>abot-dashboard 1.0.1"]
   B --> D["React dashboard<br/>verifies hashes · Leaflet maps"]
 ```
 
@@ -209,14 +209,25 @@ uv run abot build                # boundaries -> population -> osm -> accessibil
 uv run abot report               # data/processed/qa_report.md and abot_map.html
 uv run abot review               # manual-review files (changes no indicator)
 uv run abot validate             # desk evidence for review items (Overpass cache only)
-uv run abot fetch-gaps --allow-download   # one targeted Overpass query for the network-gap evidence
-uv run abot components           # walk-network components and the A3 reporting layer
+uv run abot components           # walk-network components and the A3 reporting layer (offline)
 uv run abot audit                # read-only PASS / WARN / FAIL check; exit 1 on FAIL
 uv run abot export-dashboard     # write the dashboard bundle to data/processed/dashboard/v1/
 ```
 
-- **The exporter needs every step above.** It reads the review, validation and component outputs,
-  including the targeted network-gap evidence written after `fetch-gaps --allow-download`.
+- **The exporter reads the outputs of every step above.**
+- **Optional extra evidence:** `uv run abot fetch-gaps --allow-download` sends one targeted
+  Overpass query, about the three network gaps F001, F100 and F101. Run it before
+  `abot components`.
+  - It never changes an indicator.
+  - It adds mapped access tags and gates to the gap evidence on the Network connectivity page.
+  - Without it, the gap evidence is reported as `not_examined`.
+  - `abot components` records which case applies in `review/m04/snapshot_status.json`. The exporter
+    checks that declaration (V-S5): it refuses a snapshot downloaded after `components` ran, or
+    left over from another run, and asks you to re-run `abot components`.
+- **Fresh clones cannot export yet.** The exporter's integrity checks compare against the author's
+  local archives (`data/archive/`), which are not distributed. The audit requires the Milestone 01
+  archive, and check V-S4 requires the pre-taxonomy component reference. See
+  [docs/M06_2A_REPRODUCIBILITY.md](docs/M06_2A_REPRODUCIBILITY.md).
 - Single build stages: `uv run abot build --only population osm`.
 - All parameters are in [config/settings.yaml](config/settings.yaml).
 - Experiment configurations in `config/experiments/` extend the baseline and write to their own

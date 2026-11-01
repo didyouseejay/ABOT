@@ -18,7 +18,7 @@ ABOT has two parts that never run at the same time and share exactly one interfa
 | Output / input | `data/processed/` (GeoPackage, CSVs) and the bundle `data/processed/dashboard/v1/` | The bundle, copied into the static build |
 
 The interface between them is the **dashboard data bundle**: a versioned set of JSON and GeoJSON
-files with a SHA-256 manifest, defined by the contract `abot-dashboard` 1.0.0. The frontend never
+files with a SHA-256 manifest, defined by the contract `abot-dashboard` 1.0.1. The frontend never
 reads the GeoPackage or CSVs, and never imports Python output files directly.
 
 **Analytical processing and web serving are separate.** All geospatial computation (network
@@ -48,7 +48,7 @@ flowchart LR
 
   subgraph OUT["data/processed (local)"]
     GPKG["abot_iloilo.gpkg + CSVs<br/>(authoritative outputs)"]
-    BUNDLE["dashboard/v1/<br/>manifest + 8 datasets<br/>(contract abot-dashboard 1.0.0)"]
+    BUNDLE["dashboard/v1/<br/>manifest + 8 datasets<br/>(contract abot-dashboard 1.0.1)"]
   end
 
   subgraph WEB["Dashboard: dashboard/ (static)"]
@@ -223,6 +223,12 @@ within 0.005 min ([METHODOLOGY.md](METHODOLOGY.md) §5.4).
 5. **`--check`.** Reports whether the bundle is still current (sources, configuration, stage times,
    file hashes) without writing anything.
 
+**Optional evidence input.** `abot fetch-gaps --allow-download` sends one targeted Overpass query
+about the three walk-network gaps. It feeds only the gap evidence, never an indicator.
+- `abot components` declares whether it used such a snapshot (`review/m04/snapshot_status.json`).
+- The exporter follows that declaration and refuses any mismatch (check V-S5, contract 1.0.1).
+- Without a snapshot, the gap evidence is exported as `not_examined`.
+
 ## 9. Frontend loading and visualization
 
 - **Development and build** (`dashboard/vite/bundlePlugin.ts`):
@@ -266,6 +272,14 @@ within 0.005 min ([METHODOLOGY.md](METHODOLOGY.md) §5.4).
 pinned to a date, so a fresh clone reproduces the **method** but not necessarily the **published
 numbers**: OpenStreetMap changes continuously. The manifest makes such a difference detectable, but
 not avoidable.
+
+**Limit:** `abot export-dashboard` also depends on the author's local archives in `data/archive/`,
+which are not distributed:
+- the audit gate fails without the Milestone 01 archive (`m01_archive_present`);
+- check V-S4 requires the pre-taxonomy component reference.
+
+A fresh clone therefore cannot export a bundle, even after running every pipeline stage
+([M06_2A_REPRODUCIBILITY.md](M06_2A_REPRODUCIBILITY.md)).
 
 ## 11. Known architectural limitations
 

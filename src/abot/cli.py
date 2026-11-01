@@ -83,7 +83,7 @@ def main(argv: list[str] | None = None) -> None:
     )
     p_exp = sub.add_parser(
         "export-dashboard",
-        help="write the dashboard data bundle to <processed>/dashboard/v1 (contract abot-dashboard 1.0.0); "
+        help="write the dashboard data bundle to <processed>/dashboard/v1 (contract abot-dashboard 1.0.1); "
         "read-only over the analytical outputs",
     )
     p_exp.add_argument(

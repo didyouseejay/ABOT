@@ -11,7 +11,11 @@ at the end**, newest first.
 - Licence: source code MIT ([LICENSE](LICENSE), since Milestone 06.1); data keeps its own licences
   ([docs/ATTRIBUTION.md](docs/ATTRIBUTION.md))
 - Study area: Iloilo City, Iloilo, Western Visayas (Region VI), Philippines
-- Current state: **Milestone 06.1, uncommitted** (2026-11-02): documentation, licensing and
+- Current state: **Milestone 06.2A, uncommitted** (2026-11-02): the targeted gap snapshot is now
+  optional, declared evidence for `abot export-dashboard` (check V-S5, contract `abot-dashboard`
+  1.0.1); fresh-clone workflow audit in
+  [docs/M06_2A_REPRODUCIBILITY.md](docs/M06_2A_REPRODUCIBILITY.md). No analytical result changed.
+  Before that, **Milestone 06.1** (commit `3073524`): documentation, licensing and
   portfolio presentation (README rewrite, [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), MIT
   `LICENSE`, attribution, screenshots, unused `chart.js` and `react-leaflet` removed). No analytical
   code, method or result changed. Before that, **Milestone 06.0** (commit `daa2f69`): technical audit
@@ -214,6 +218,7 @@ You can run single build stages with `abot build --only population osm`.
 | [tests/test_m04.py](tests/test_m04.py) | Offline regression tests for Milestone 04 |
 | [src/abot/dashboard_data.py](src/abot/dashboard_data.py) | Dashboard data bundle per [docs/DASHBOARD_DATA_CONTRACT.md](docs/DASHBOARD_DATA_CONTRACT.md): read-only over the outputs, audit gate, deterministic cell chunks, validation of the written files, temporary-directory install, `--check` staleness report (Milestone 05.1) |
 | [tests/test_m05.py](tests/test_m05.py) | Regression tests for Milestone 05.1 and its M05.2 S0 hardening (28 offline unit tests; 2 end-to-end tests that read the real outputs read-only, write only to a temporary directory and are skipped without data) |
+| [tests/test_m06.py](tests/test_m06.py) | Regression tests for Milestone 06.2A: the optional, declared targeted snapshot in the exporter (V-S5): 9 offline unit tests and 1 end-to-end test on the real outputs (temporary directory only; skipped without data) |
 | [dashboard/](dashboard/) | Static frontend (Milestone 05.2): React 19 + Vite 8 + TypeScript 7 (strict). `vite/bundlePlugin.ts` serves the bundle in development (read per request, never watched) and copies it, hash-checked, into `dist/data/v1/` at build; `src/contract/` types and version check; `src/data/` loader, validation, SHA-256, React context; `src/model/` catalogue, scenario names, formatting, distribution view, audit/Git states; `test/` Vitest suite with a hand-made fixture bundle. S3: `src/routes.ts` (section registry), `src/model/shell.ts` (provenance items). S4–S7: `src/components/` (top bar, provenance colophon, caveat notes, shared UI, interface states), `src/pages/` (the seven pages), `src/model/{view,values,labels,ramps}.ts`, `src/map/leaflet.ts`, `src/styles/{tokens,app}.css` |
 
 ### Outputs (`data/processed/`)
@@ -552,7 +557,7 @@ evacuation and transport are descriptive-only categories (see Section 8).
 | `abot audit` (3 km baseline) | M02B: PASS 50, WARN 3, FAIL 0, INFO 11. M03 (with the experiment-run checks): PASS 54, WARN 4 (pending reviews, Guimaras facilities, stale `e7_buffer_3km`), FAIL 0, INFO 11. M04: PASS 55 (new archive `hist_e7_buffer_3km_m02` verified), WARN 4, FAIL 0, INFO 11. M04 follow-up: PASS 57 (A3 layer current; review restore point verified), WARN 3 (`e7_buffer_3km` cleared; 7 duplicates still pending), FAIL 0, INFO 11 |
 | Determinism (M04 + follow-up) | `abot components` under `PYTHONHASHSEED` 0 and 12345: all 17 evidence files and the A3 CSVs byte-identical (A3 GeoPackage identical in content); A1 reproduces the saved baseline, and baseline file hashes are unchanged on every run |
 
-### Unit tests (230 Python, all passing; 81 Vitest tests in `dashboard/test/`, all passing; the 13 Milestone 01 tests are listed here, 40 Milestone 02 tests are in `tests/test_m02.py`, 32 Milestone 02B tests in `tests/test_m02b.py`, 18 Milestone 03 tests in `tests/test_m03.py`, 97 Milestone 04 tests in `tests/test_m04.py`, 30 Milestone 05 tests in `tests/test_m05.py`, 2 of which read the real outputs and are skipped without them)
+### Unit tests (240 Python, all passing; 81 Vitest tests in `dashboard/test/`, all passing; 10 Milestone 06.2A tests in `tests/test_m06.py`, 1 of which reads the real outputs; the 13 Milestone 01 tests are listed here, 40 Milestone 02 tests are in `tests/test_m02.py`, 32 Milestone 02B tests in `tests/test_m02b.py`, 18 Milestone 03 tests in `tests/test_m03.py`, 97 Milestone 04 tests in `tests/test_m04.py`, 30 Milestone 05 tests in `tests/test_m05.py`, 2 of which read the real outputs and are skipped without them)
 
 - Conversion from old PSGC codes to COD-AB p-codes (3 cases).
 - Merging of OSM query tags (lists and "any value").
@@ -819,6 +824,68 @@ uv run pytest           # offline unit tests
 
 Newest entries first. Each entry records the date, the milestone, what changed and why, files
 affected, and any effect on results. Future work is appended here as it is done.
+
+### 2026-11-02 — Milestone 06.2A: fresh-clone workflow audit; targeted snapshot made optional, declared evidence (uncommitted)
+
+**Why:** M06.1 found that `abot export-dashboard` failed on a fresh clone unless
+`abot fetch-gaps --allow-download` had run first. Full report:
+[docs/M06_2A_REPRODUCIBILITY.md](docs/M06_2A_REPRODUCIBILITY.md).
+
+**Found:**
+- **The snapshot is optional evidence.** It never changes a component class or indicator:
+  - `components.build` writes the A3 layer before it reads the snapshot;
+  - an isolated run without the snapshot gave byte-identical A3, approach, component, transition
+    and access-impact files (only `gap_investigation.csv` differed).
+- **`abot components` already supports its absence:** it deletes the snapshot tables and writes
+  `snapshot_status.json` with `obtained: false`.
+- **Only the exporter's source list (V-S1) required `snapshot_corridor_analysis.csv`.** The
+  observed failure was `V-S1: missing source …`, with nothing written.
+- **Second latent defect:** a snapshot with no link candidates makes `components` write an empty
+  file that `pd.read_csv` cannot parse, so the export would have crashed.
+- **Two further fresh-clone blockers, documented and not changed:**
+  - V-S4 needs the archived pre-taxonomy component reference;
+  - the audit gate fails without `data/archive/m01_3edc0dd/`.
+
+  A fix is proposed in report §3.3 for the author's decision.
+
+**Changed:**
+- `src/abot/dashboard_data.py`:
+  - `snapshot_status.json` is a declared source;
+  - the corridor table is a source only when a snapshot is declared;
+  - `load_corridors` reads an empty table as no rows;
+  - new check **V-S5** refuses every mismatch between the declaration, the corridor table, the gap
+    table and the latest `osm_targeted/` manifest entry, with "re-run `abot components`";
+  - `CONTRACT_VERSION` is now 1.0.1.
+- `src/abot/cli.py`: help text.
+- `docs/DASHBOARD_DATA_CONTRACT.md`: version 1.0.1 (patch):
+  - §7.1.1 makes the corridor table conditional;
+  - `gap_evidence` and `targeted_snapshot` are documented as nullable, as the 1.0.0 code already
+    produced;
+  - V-S5;
+  - a revision record.
+- `README.md` and `docs/ARCHITECTURE.md`: `fetch-gaps` is optional; the archive blockers are stated;
+  contract 1.0.1.
+
+**Added:**
+- `tests/test_m06.py`: 10 tests covering the declared, undeclared, empty and missing states, five
+  inconsistent states, and an end-to-end export of the no-snapshot path on the real outputs to a
+  temporary folder.
+- `docs/M06_2A_REPRODUCIBILITY.md`.
+
+**Verified:**
+- pytest: 240 passed.
+- ruff check: passed; `ruff format --check`: the same 8 pre-existing files.
+- Vitest: 81 passed; typecheck clean.
+- V-S5 passes on the current data (read-only).
+- Isolated scratch run (HEAD code via `git archive`, copied data without the snapshot):
+  - HEAD exporter: exit 1 (V-S1);
+  - fixed exporter, no archives: exit 1 (V-S4);
+  - fixed exporter with archives: exit 0, with every indicator equal to the installed bundle.
+
+**Effect on results:** none.
+- The installed bundle is unchanged: version 1.0.0, from `3073524`, still current.
+- A re-export after commit will differ only in `contract_version` 1.0.1, one more `source_files`
+  entry, timestamps and commit.
 
 ### 2026-11-02 — Milestone 06.1: make it visible (documentation, licensing, presentation; uncommitted)
 
