@@ -9,6 +9,9 @@ wheels/
 # Virtual environments
 .venv
 
+# Personal editor settings (untracked files would mark the dashboard bundle's provenance as dirty)
+.vscode/
+
 # Data is re-downloadable via `abot fetch`; never commit it
 data/
 cache/

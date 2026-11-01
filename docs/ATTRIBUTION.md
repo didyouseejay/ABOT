@@ -1,0 +1,96 @@
+# Data and third-party attribution
+
+ABOT's original source code is released under the [MIT License](../LICENSE). That licence does
+**not** extend to the data the pipeline downloads or derives, nor to third-party software, fonts or
+map tiles. Each keeps its own terms, summarised below. Library licences were read from the installed
+package metadata (Python `importlib.metadata`, `dashboard/node_modules/*/package.json`) on
+2026-11-02.
+
+## 1. Data sources
+
+No source data is stored in this repository (`data/` is git-ignored). `abot fetch` downloads the
+data again, and `data/raw/manifest.json` records each file's URL, licence and SHA-256. Details are in
+[DATA_SOURCES.md](DATA_SOURCES.md).
+
+| Data | Provider | Licence | Required credit |
+|---|---|---|---|
+| Roads, paths, barriers and facilities | © OpenStreetMap contributors, via the Overpass API (osmnx) | [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/) | "© OpenStreetMap contributors", linked to <https://www.openstreetmap.org/copyright> |
+| Administrative boundaries (COD-AB v03) | OCHA / HDX, from NAMRIA and PSA | CC BY-IGO | OCHA / NAMRIA / PSA, COD-AB |
+| 2020 Census of Population by barangay | Philippine Statistics Authority (PSA), via HDX | CC BY | PSA, 2020 Census of Population and Housing |
+| Population counts, constrained 100 m (R2025A, 2020 and 2026) | WorldPop, University of Southampton (DOI 10.5258/SOTON/WP00839) | CC BY 4.0 | WorldPop (www.worldpop.org) |
+
+### OpenStreetMap and the ODbL
+
+- Every ABOT output that contains OpenStreetMap data is a **Derivative Database** under the ODbL:
+  the GeoPackage, the CSVs and the dashboard bundle (`facilities.geojson`, `network.json`, and the
+  travel times computed on the OSM network).
+- **If you publish such a database** (for example, by deploying the dashboard with its bundle, or
+  attaching the bundle to a release), it must be offered under the ODbL. It must also keep the
+  attribution and state that it contains OpenStreetMap data.
+- Maps, figures and screenshots made from it are **Produced Works**. They need the credit
+  "© OpenStreetMap contributors", but not the ODbL itself. The screenshots in
+  [assets/screenshots/](assets/screenshots/) show this credit in the map attribution.
+- The MIT licence of the code does not change any of this.
+
+### Registries researched but not used
+
+The DOH National Health Facility Registry, the DepEd school masterlist and the Iloilo City CDRRMO
+evacuation-centre list were researched but are **not** integrated. No redistribution licence was
+found for any of them ([DATA_SOURCES.md](DATA_SOURCES.md) §4).
+
+## 2. Map backgrounds in the dashboard
+
+The dashboard loads background tiles directly from third-party servers at view time. No tiles are
+stored in the repository or the bundle.
+
+| Background | Server | Credit shown in the map | Terms |
+|---|---|---|---|
+| Street map | `tile.openstreetmap.org` | "Street map © OpenStreetMap contributors" | [OSM Tile Usage Policy](https://operations.osmfoundation.org/policies/tiles/): suitable for light use such as a portfolio demo; heavy traffic needs another tile provider |
+| Satellite | Esri World Imagery (`server.arcgisonline.com`) | "Imagery © Esri, Maxar, Earthstar Geographics, and the GIS User Community" | Esri's terms of use for ArcGIS Online basemaps apply. Check them before any commercial or high-traffic deployment |
+| Satellite labels | Esri World Boundaries and Places | Covered by the Esri credit above | As above |
+
+The map also always shows the data credit "Data © OpenStreetMap contributors (ODbL) · boundaries
+OCHA COD-AB" (`dashboard/src/map/leaflet.ts`). With "No background" selected, no tile server is
+contacted.
+
+## 3. Python libraries (runtime)
+
+Pinned in [`uv.lock`](../uv.lock).
+
+| Package | Version | Licence |
+|---|---|---|
+| geopandas | 1.2.0 | BSD-3-Clause |
+| osmnx | 2.1.1 | MIT |
+| networkx | 3.7 | BSD-3-Clause |
+| shapely | 2.2.0 | BSD-3-Clause |
+| rasterio | 1.5.2 | BSD-3-Clause |
+| pyproj | 3.8.0 | MIT |
+| pyogrio | 0.13.0 | MIT |
+| pandas | 3.1.0 | BSD-3-Clause |
+| numpy | 2.5.4 | BSD-3-Clause (with bundled 0BSD, MIT, Zlib, CC0-1.0 parts) |
+| scipy | 1.18.1 | BSD-3-Clause |
+| folium | 0.20.0 | MIT |
+| requests | 2.34.2 | Apache-2.0 |
+| PyYAML | 6.0.3 | MIT |
+| openpyxl | 3.1.5 | MIT |
+
+Development tools: pytest (MIT) and ruff (MIT).
+
+## 4. Dashboard libraries and assets
+
+Pinned in [`dashboard/package-lock.json`](../dashboard/package-lock.json).
+
+| Package | Version | Licence | Shipped to the browser? |
+|---|---|---|---|
+| react, react-dom | 19.3.1 | MIT | Yes |
+| leaflet | 1.9.4 | BSD-2-Clause | Yes (loaded on first map view) |
+| @fontsource/atkinson-hyperlegible | 5.3.0 | SIL Open Font License 1.1 | Yes (self-hosted font files) |
+| vite | 8.3.5 | MIT | No (build tool) |
+| @vitejs/plugin-react | 6.1.2 | MIT | No |
+| typescript | 7.0.2 | Apache-2.0 | No |
+| vitest | 5.0.5 | MIT | No |
+| @types/* | — | MIT | No (type declarations) |
+
+Milestone 06.1 removed `chart.js` (MIT) and `react-leaflet` (Hippocratic License 2.1, which is not
+an OSI-approved open-source licence) because neither was used. The charts are hand-built SVG, and
+Leaflet is used directly.

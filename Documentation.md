@@ -7,11 +7,16 @@ place. **Every change or addition to the project is logged in the [Change log](#
 at the end**, newest first.
 
 - Repository: `abot` (Python package `abot`, v0.1.0)
-- Author: didyouseejay (carljohn.coopera@wvsu.edu.ph), West Visayas State University
+- Author: Carl John L. Coopera (GitHub: didyouseejay; carljohn.coopera@wvsu.edu.ph), West Visayas State University
+- Licence: source code MIT ([LICENSE](LICENSE), since Milestone 06.1); data keeps its own licences
+  ([docs/ATTRIBUTION.md](docs/ATTRIBUTION.md))
 - Study area: Iloilo City, Iloilo, Western Visayas (Region VI), Philippines
-- Current state: **Milestone 06.0, uncommitted** (2026-11-01): technical audit and portfolio baseline
-  ([docs/M06_TECHNICAL_AUDIT.md](docs/M06_TECHNICAL_AUDIT.md)); assessment only, no code or result
-  changed. Before that, **Milestone 05.3** (commit `56fbd64`): the dashboard front end redesigned for
+- Current state: **Milestone 06.1, uncommitted** (2026-11-02): documentation, licensing and
+  portfolio presentation (README rewrite, [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), MIT
+  `LICENSE`, attribution, screenshots, unused `chart.js` and `react-leaflet` removed). No analytical
+  code, method or result changed. Before that, **Milestone 06.0** (commit `daa2f69`): technical audit
+  and portfolio baseline ([docs/M06_TECHNICAL_AUDIT.md](docs/M06_TECHNICAL_AUDIT.md)). Before that,
+  **Milestone 05.3** (commit `56fbd64`): the dashboard front end redesigned for
   residents and barangay/city officials (plain language, five public sections, street/satellite
   background maps); the technical pages move under "For researchers". No analytical result changed.
   Before that, **Milestone 05.2 S3** (2026-11-01): dashboard application shell
@@ -149,7 +154,8 @@ External facility registries (DOH NHFR, DepEd masterlist, Iloilo City CDRRMO eva
 were researched but **not integrated**; see [docs/DATA_SOURCES.md](docs/DATA_SOURCES.md) section 4.
 
 **Licence obligation:** if a database derived from OSM is shared publicly, it must also be released
-under the ODbL. Maps and figures must credit "© OpenStreetMap contributors".
+under the ODbL. Maps and figures must credit "© OpenStreetMap contributors". Library, font and
+map-tile licences are listed in [docs/ATTRIBUTION.md](docs/ATTRIBUTION.md) (M06.1).
 
 ---
 
@@ -238,8 +244,9 @@ Column definitions: [docs/DATA_DICTIONARY.md](docs/DATA_DICTIONARY.md).
 - Dev tools: pytest, ruff. No dependencies were added in Milestone 02 or 02B.
 - Frontend (`dashboard/`, Milestone 05.2): Node 24.18.0, npm 10.8.1; versions pinned in
   `dashboard/package.json` and `dashboard/package-lock.json`. Runtime: react 19.3.1, react-dom 19.3.1,
-  leaflet 1.9.4, react-leaflet 5.0.0, chart.js 4.6.1, @fontsource/atkinson-hyperlegible 5.3.0
-  (self-hosted font, M05.3). Development: vite 8.3.5,
+  leaflet 1.9.4 (used directly, no React wrapper), @fontsource/atkinson-hyperlegible 5.3.0
+  (self-hosted font, M05.3); charts are hand-built SVG. `react-leaflet` 5.0.0 and `chart.js` 4.6.1
+  were listed until M06.1 but never imported, and were removed. Development: vite 8.3.5,
   @vitejs/plugin-react 6.1.2, typescript 7.0.2, vitest 5.0.5, @types/react 19.3.0,
   @types/react-dom 19.3.0, @types/leaflet 1.9.22, @types/node 24.19.2 (types only).
 - Run npm scripts from PowerShell or cmd. In the Git Bash used by the coding assistant,
@@ -812,6 +819,65 @@ uv run pytest           # offline unit tests
 
 Newest entries first. Each entry records the date, the milestone, what changed and why, files
 affected, and any effect on results. Future work is appended here as it is done.
+
+### 2026-11-02 — Milestone 06.1: make it visible (documentation, licensing, presentation; uncommitted)
+
+**Why:** The M06.0 audit found that a reviewer could not see or understand the project quickly.
+Its High findings were:
+- the README was out of date;
+- there were no screenshots;
+- there was no LICENSE;
+- there was no architecture overview.
+
+It also found unused dependencies.
+
+**Added:**
+- `LICENSE`: MIT, © 2026 Carl John L. Coopera. The author confirmed ownership and chose MIT. The
+  licence covers the code only; data keeps its own licences.
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): system overview, Mermaid data-flow diagram, each
+  pipeline stage, the exporter, the frontend loader, provenance, limitations, and why there is no
+  API server or database.
+- [docs/ATTRIBUTION.md](docs/ATTRIBUTION.md):
+  - data licences;
+  - ODbL obligations;
+  - tile providers (OSM tile policy, Esri terms);
+  - Python and npm libraries with licences, read from the installed metadata.
+- `docs/assets/screenshots/`: six genuine 1440×900 captures of the running dashboard and the current
+  bundle (overview, map, barangays, facilities, quality, network). They were taken with the
+  installed Chrome in headless mode, so no new tool was added.
+
+**Changed:**
+- `README.md`: rewritten as the entry point. It covers the problem, features, screenshots, selected
+  findings, architecture, stack, setup for both halves, tests, attribution, limitations and licence.
+  Every figure comes from the current bundle (`city.json`, `barangay_indicators.json`) or the
+  export-time audit.
+- `pyproject.toml`:
+  - `license = "MIT"`, `license-files = ["LICENSE"]`;
+  - author name. A test wheel build with uv 0.13.6 carried `License-Expression: MIT` and the
+    LICENSE file. `uv lock --check` was unchanged (38 packages).
+- `dashboard/package.json`: `"license": "MIT"`.
+- `.gitignore`: `.vscode/`. `export-dashboard` counts untracked files as uncommitted changes, so
+  without this rule the planned clean re-export would still record a dirty tree.
+- This file: the author, licence and current-state lines, and the frontend stack in §4.
+
+**Removed:** `chart.js` 4.6.1 and `react-leaflet` 5.0.0 (with `@kurkle/color`, `@react-leaflet/core`),
+via `npm uninstall`, which updated `package-lock.json`. Before removal it was verified that:
+- no static or dynamic import uses either package (the only dynamic import is `import("leaflet")`);
+- nothing in the lockfile depends on them except the root;
+- the production bundle contained none of their code.
+
+`react-leaflet` is licensed Hippocratic-2.1, which is not OSI-approved.
+
+**Found (documented, not changed):** a fresh clone cannot run `abot export-dashboard` without first
+running `abot fetch-gaps --allow-download`. The reason:
+- `dashboard_data.load` reads `review/m04/snapshot_corridor_analysis.csv` unconditionally;
+- `abot components` writes that file only when a targeted snapshot exists.
+
+The README lists the full command chain.
+
+**Effect on results:** none. No analytical code, configuration, data or bundle was changed. The
+bundle still records commit `5ed16d2` (dirty) until it is re-exported after this milestone is
+committed.
 
 ### 2026-11-02 — Milestone 06.0: audit re-verified (assessment only; uncommitted)
 
