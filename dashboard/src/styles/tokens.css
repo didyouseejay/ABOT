@@ -2,9 +2,12 @@
  * ABOT design tokens. Restrained geospatial research palette: deep teal for identity, neutral
  * surfaces, and status colours that always come with a text label (colour is never the only cue).
  * Text/background pairs below meet WCAG 2.1 AA (4.5:1) or better.
+ *
+ * Section A is the M05.2 S3 token set, unchanged except for the layout block (top navigation
+ * replaces the sidebar). Section B holds the additions from the Claude Design prototype.
  */
 :root {
-  /* Typography */
+  /* ---------- A. Existing tokens ---------- */
   --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Helvetica Neue", Arial, sans-serif;
   --font-mono: ui-monospace, "Cascadia Mono", "Segoe UI Mono", Consolas, "Liberation Mono", monospace;
   --font-size-xs: 0.8125rem;
@@ -19,7 +22,6 @@
   --line-height-tight: 1.25;
   --line-height-body: 1.55;
 
-  /* Spacing (4 px base) */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
@@ -29,7 +31,6 @@
   --space-7: 2.5rem;
   --space-8: 3rem;
 
-  /* Colours: text and surfaces */
   --color-ink: #1b2a2f;
   --color-ink-muted: #4a5a60;
   --color-surface: #ffffff;
@@ -37,7 +38,6 @@
   --color-border: #d3dbd9;
   --color-border-strong: #a9b6b4;
 
-  /* Colours: identity */
   --color-brand: #0e4f5c;
   --color-brand-strong: #0a3a44;
   --color-brand-tint: #e6f1f2;
@@ -47,7 +47,6 @@
   --color-nav-hover: #11505b;
   --color-highlight: #ffd166;
 
-  /* Colours: status (text / background / border) */
   --color-ok: #11632f;
   --color-ok-bg: #e7f4ec;
   --color-ok-border: #9fd3b2;
@@ -64,19 +63,98 @@
   --color-info-bg: #e6f1f2;
   --color-info-border: #a7cfd3;
 
-  /* Focus */
   --focus-ring: 3px solid #1d6fd8;
   --focus-ring-on-brand: 3px solid var(--color-highlight);
   --focus-offset: 2px;
 
-  /* Borders, radii, elevation */
   --border-width: 1px;
   --radius-sm: 4px;
   --radius-md: 6px;
   --shadow-sm: 0 1px 2px rgb(16 40 45 / 0.08);
 
-  /* Layout */
-  --sidebar-width: 16rem;
-  --content-max: 72rem;
-  --header-height: 3.5rem;
+  /* Layout (changed: --sidebar-width removed; --header-height renamed) */
+  --content-max: 80rem;
+  --topbar-height: 3.75rem;
+  --provenance-height: 2rem;
+
+  /* ---------- B. Additions ---------- */
+
+  /* Numerals: every figure uses tabular lining numerals */
+  --font-numeric: tabular-nums lining-nums;
+
+  /* Elevation for drawers and popovers (one step above --shadow-sm) */
+  --shadow-md: 0 4px 16px rgb(16 40 45 / 0.14), 0 1px 3px rgb(16 40 45 / 0.08);
+
+  /* Walking travel time ramp: 6 steps, single-hue sequential (light = short, dark = long).
+     Lightness falls monotonically, so it reads in greyscale and for deuteranopia/protanopia. */
+  --ramp-time-1: #fff2c2; /* 0–10 min  */
+  --ramp-time-2: #fdd486; /* 10–15 min */
+  --ramp-time-3: #f6a848; /* 15–30 min */
+  --ramp-time-4: #d9742b; /* 30–45 min */
+  --ramp-time-5: #a44a1f; /* 45–60 min */
+  --ramp-time-6: #5f2a14; /* > 60 min  */
+  /* No citywide time: neutral grey + hatch, never a ramp step */
+  --ramp-none: #c3c9ca;
+  --ramp-none-hatch: #7d8789;
+
+  /* Driving time ramp: separate hue family, never shown with the walking ramp */
+  --ramp-drive-1: #efe7f4; /* 0–5 min   */
+  --ramp-drive-2: #cfbde1; /* 5–10 min  */
+  --ramp-drive-3: #a68bc6; /* 10–15 min */
+  --ramp-drive-4: #7556a3; /* 15–30 min */
+  --ramp-drive-5: #432a6e; /* > 30 min  */
+
+  /* Share of all residents within N minutes, 0–100 % in 5 classes (dark = larger share) */
+  --ramp-share-1: #eef5f2; /*  0–20 % */
+  --ramp-share-2: #c3e0d6; /* 20–40 % */
+  --ramp-share-3: #84bfb0; /* 40–60 % */
+  --ramp-share-4: #3f8f86; /* 60–80 % */
+  --ramp-share-5: #145a5c; /* 80–100 % */
+
+  /* A3 population categories: colour + symbol (● ◆ ▲ ✕) + pattern on bars */
+  --cat-network-connected: #2a7f8f;
+  --cat-locally-connected: #c28a12;
+  --cat-access-uncertain: #9a4d9e;
+  --cat-unconnected: #3d4447;
+
+  /* Reliability (reuses status tones; each paired with a symbol and a word) */
+  --rel-ok: var(--color-ok);
+  --rel-ok-bg: var(--color-ok-bg);
+  --rel-ok-border: var(--color-ok-border);
+  --rel-caution: var(--color-warn);
+  --rel-caution-bg: var(--color-warn-bg);
+  --rel-caution-border: var(--color-warn-border);
+  --rel-low: var(--color-error);
+  --rel-low-bg: var(--color-error-bg);
+  --rel-low-border: var(--color-error-border);
+  --rel-unverified: var(--color-unknown);
+  --rel-unverified-bg: var(--color-unknown-bg);
+  --rel-unverified-border: var(--color-unknown-border);
+
+  /* Scenarios: A3 walk solid/strong; A1 walk comparison outlined/muted; drive a distinct hue */
+  --scenario-a3: var(--color-brand);
+  --scenario-a3-ink: var(--color-on-brand);
+  --scenario-a1: #586a70;
+  --scenario-a1-bg: #ffffff;
+  --scenario-drive: #563b86;
+  --scenario-drive-ink: #ffffff;
+  --scenario-drive-tint: #f3eff9;
+  --scenario-drive-border: #c9bde0;
+  --scenario-a2: #7a4b00;
+
+  /* Facility categories (9, nominal; Okabe–Ito based, always with a text label in tooltips and lists) */
+  --fac-health: #d55e00;
+  --fac-pharmacy: #cc79a7;
+  --fac-education: #0072b2;
+  --fac-safety: #1b2a2f;
+  --fac-government: #8a9294;
+  --fac-market: #e69f00;
+  --fac-finance: #009e73;
+  --fac-transport: #56b4e9;
+  --fac-evacuation: #f0e442;
+
+  /* Evidence-only and analysis-only surfaces */
+  --evidence-bg: #fbf8f1;
+  --evidence-stripe: #efe6cf;
+  --evidence-ink: #5c4a1e;
 }

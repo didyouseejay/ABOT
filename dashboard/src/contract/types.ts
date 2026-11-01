@@ -355,12 +355,99 @@ export interface Facilities extends FeatureCollection<FacilityProps> {
   dataset: "facilities";
 }
 
+// §7.7 network. The loader checks the envelope only; pages show a part as unavailable when it is missing.
+
+export interface NetworkApproach {
+  approach: string;
+  scenario_label: string;
+  role: Role;
+  components_retained: number;
+  network_km: number;
+  pop_network_connected: number;
+  pop_locally_connected: number;
+  pop_access_uncertain: number;
+  pop_unconnected: number;
+}
+
+export interface NetworkComponent {
+  fragment: string;
+  component_class: string;
+  length_km: number;
+  gap_to_main_m: number | null;
+  pop_attached_A3: number;
+  cells_attached_A3: number;
+  km_private: number;
+  km_no: number;
+  retained_A3: boolean;
+  geometry_kind: string;
+  bbox: { lon_min: number; lat_min: number; lon_max: number; lat_max: number } | null;
+}
+
+export interface GapEvidence {
+  fragment: string;
+  component_class: string;
+  cache_gap_to_main_m: number | null;
+  cache_noexit_at_gap: boolean | null;
+  snapshot_physical_connection: string;
+  snapshot_link_m: number | null;
+  snapshot_link_ways: string | null;
+  snapshot_link_access_tags: string | null;
+  snapshot_corridor_gates: string | null;
+  snapshot_public_pedestrian_status: string;
+  snapshot_authorized_group: string;
+  snapshot_field_verification_required: boolean;
+  remaining_unverified: string;
+  classification_reason: string;
+  applied: boolean;
+}
+
+export interface AccessClassification {
+  kind: string;
+  access_class: string;
+  public_pedestrian_status: string;
+  treatment: string;
+  km: number | null;
+  km_main: number | null;
+  nodes: number | null;
+  analysis_only: boolean;
+  applied: boolean;
+}
+
+export interface AccessImpact {
+  scenario: string;
+  definition: string | null;
+  km_removed_main: number | null;
+  pop_lose_network: number | null;
+  pop_become_local: number | null;
+  pop_time_up_gt1min: number | null;
+  analysis_only: boolean;
+  applied: boolean;
+}
+
 export interface Network extends Envelope {
   dataset: "network";
-  [part: string]: unknown;
+  approaches: NetworkApproach[];
+  transition_a1_to_a3: { a1_category: string; a3_category: string; pop: number }[];
+  component_classes: { component_class: string; components: number; length_km: number; pop_attached_A3: number }[];
+  components: NetworkComponent[];
+  fragment_geometries: { type: "FeatureCollection"; features: Feature<{ fragment: string; geometry_kind: string; n_edges?: number; length_km?: number; gap_to_main_m?: number | null }>[] };
+  gap_evidence: GapEvidence[];
+  access_classification: AccessClassification[];
+  access_impact: AccessImpact[];
+}
+
+// §7.8 provenance
+
+export interface QaCheck {
+  ok: boolean | null;
+  value: unknown;
+  note?: string | null;
 }
 
 export interface Provenance extends Envelope {
   dataset: "provenance";
-  [part: string]: unknown;
+  sources: { path: string; url: string | null; licence: string | null; retrieved_utc: string | null; bytes: number | null; sha256: string | null }[];
+  qa: Record<string, Record<string, QaCheck>>;
+  limitations: { code: string; text: string }[];
+  documents: { title: string; path: string }[];
 }

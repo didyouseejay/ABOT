@@ -22,6 +22,20 @@ export function formatValue(v: number | null | undefined, unit: string): string 
   return n;
 }
 
+const FIXED = [0, 1, 2].map((d) => new Intl.NumberFormat("en-PH", { minimumFractionDigits: d, maximumFractionDigits: d }));
+
+/** en-PH figure with exactly 0, 1 or 2 decimals (1 in compact views, the source's 2 in tables). */
+export function fixed(v: number, decimals = 1): string {
+  return (FIXED[decimals] ?? (FIXED[1] as Intl.NumberFormat)).format(v);
+}
+
+/** A1 − A3 difference, signed, one decimal; empty when either value is missing. */
+export function delta(a3: number | null | undefined, a1: number | null | undefined): string {
+  if (a3 === null || a3 === undefined || a1 === null || a1 === undefined) return "";
+  const d = a1 - a3;
+  return `${d >= 0 ? "+" : "−"}${fixed(Math.abs(d), 1)}`;
+}
+
 export function isUnavailable(v: number | null | undefined): v is null | undefined {
   return v === null || v === undefined;
 }

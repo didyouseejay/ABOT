@@ -4,10 +4,11 @@ export const PROJECT = {
   fullName: "Geospatial Accessibility and Public Infrastructure Intelligence System",
   tagline: "Bringing essential services within reach.",
   phrase: "Mapping communities. Measuring accessibility. Informing better infrastructure decisions.",
+  institution: "West Visayas State University",
 } as const;
 
 /** A location ring around a small network of nodes: places, links, reach. Decorative. */
-function Mark() {
+export function Mark() {
   return (
     <svg className="brand__mark" viewBox="0 0 36 36" aria-hidden="true" focusable="false">
       <circle cx="18" cy="18" r="15" fill="none" stroke="currentColor" strokeWidth="2" opacity="0.55" />
@@ -19,14 +20,13 @@ function Mark() {
   );
 }
 
-export function Brand() {
+/** The brand as the home link in the top bar; the full name hides visually (not for screen readers) when space is tight. */
+export function Brand({ href }: { href: string }) {
   return (
-    <div className="brand">
+    <a className="brand" href={href} aria-label={`${PROJECT.name} home: Overview`}>
       <Mark />
-      <div>
-        <p className="brand__name">{PROJECT.name}</p>
-        <p className="brand__full">{PROJECT.fullName}</p>
-      </div>
-    </div>
+      <span className="brand__name">{PROJECT.name}</span>
+      <span className="brand__full">{PROJECT.fullName}</span>
+    </a>
   );
 }

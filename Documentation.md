@@ -203,7 +203,7 @@ You can run single build stages with `abot build --only population osm`.
 | [tests/test_m04.py](tests/test_m04.py) | Offline regression tests for Milestone 04 |
 | [src/abot/dashboard_data.py](src/abot/dashboard_data.py) | Dashboard data bundle per [docs/DASHBOARD_DATA_CONTRACT.md](docs/DASHBOARD_DATA_CONTRACT.md): read-only over the outputs, audit gate, deterministic cell chunks, validation of the written files, temporary-directory install, `--check` staleness report (Milestone 05.1) |
 | [tests/test_m05.py](tests/test_m05.py) | Regression tests for Milestone 05.1 and its M05.2 S0 hardening (28 offline unit tests; 2 end-to-end tests that read the real outputs read-only, write only to a temporary directory and are skipped without data) |
-| [dashboard/](dashboard/) | Static frontend (Milestone 05.2): React 19 + Vite 8 + TypeScript 7 (strict). `vite/bundlePlugin.ts` serves the bundle in development (read per request, never watched) and copies it, hash-checked, into `dist/data/v1/` at build; `src/contract/` types and version check; `src/data/` loader, validation, SHA-256, React context; `src/model/` catalogue, scenario names, formatting, distribution view, audit/Git states; `test/` Vitest suite with a hand-made fixture bundle. S3: `src/routes.ts` (section registry), `src/components/` (shell layout, status badge, interface states), `src/pages/PlaceholderPage.tsx`, `src/model/shell.ts` (provenance items), `src/styles/{tokens,shell}.css` |
+| [dashboard/](dashboard/) | Static frontend (Milestone 05.2): React 19 + Vite 8 + TypeScript 7 (strict). `vite/bundlePlugin.ts` serves the bundle in development (read per request, never watched) and copies it, hash-checked, into `dist/data/v1/` at build; `src/contract/` types and version check; `src/data/` loader, validation, SHA-256, React context; `src/model/` catalogue, scenario names, formatting, distribution view, audit/Git states; `test/` Vitest suite with a hand-made fixture bundle. S3: `src/routes.ts` (section registry), `src/model/shell.ts` (provenance items). S4–S7: `src/components/` (top bar, provenance colophon, caveat notes, shared UI, interface states), `src/pages/` (the seven pages), `src/model/{view,values,labels,ramps}.ts`, `src/map/leaflet.ts`, `src/styles/{tokens,app}.css` |
 
 ### Outputs (`data/processed/`)
 
@@ -539,7 +539,7 @@ evacuation and transport are descriptive-only categories (see Section 8).
 | `abot audit` (3 km baseline) | M02B: PASS 50, WARN 3, FAIL 0, INFO 11. M03 (with the experiment-run checks): PASS 54, WARN 4 (pending reviews, Guimaras facilities, stale `e7_buffer_3km`), FAIL 0, INFO 11. M04: PASS 55 (new archive `hist_e7_buffer_3km_m02` verified), WARN 4, FAIL 0, INFO 11. M04 follow-up: PASS 57 (A3 layer current; review restore point verified), WARN 3 (`e7_buffer_3km` cleared; 7 duplicates still pending), FAIL 0, INFO 11 |
 | Determinism (M04 + follow-up) | `abot components` under `PYTHONHASHSEED` 0 and 12345: all 17 evidence files and the A3 CSVs byte-identical (A3 GeoPackage identical in content); A1 reproduces the saved baseline, and baseline file hashes are unchanged on every run |
 
-### Unit tests (230 Python, all passing; 72 Vitest tests in `dashboard/test/`, all passing; the 13 Milestone 01 tests are listed here, 40 Milestone 02 tests are in `tests/test_m02.py`, 32 Milestone 02B tests in `tests/test_m02b.py`, 18 Milestone 03 tests in `tests/test_m03.py`, 97 Milestone 04 tests in `tests/test_m04.py`, 30 Milestone 05 tests in `tests/test_m05.py`, 2 of which read the real outputs and are skipped without them)
+### Unit tests (230 Python, all passing; 79 Vitest tests in `dashboard/test/`, all passing; the 13 Milestone 01 tests are listed here, 40 Milestone 02 tests are in `tests/test_m02.py`, 32 Milestone 02B tests in `tests/test_m02b.py`, 18 Milestone 03 tests in `tests/test_m03.py`, 97 Milestone 04 tests in `tests/test_m04.py`, 30 Milestone 05 tests in `tests/test_m05.py`, 2 of which read the real outputs and are skipped without them)
 
 - Conversion from old PSGC codes to COD-AB p-codes (3 cases).
 - Merging of OSM query tags (lists and "any value").
@@ -806,6 +806,63 @@ uv run pytest           # offline unit tests
 
 Newest entries first. Each entry records the date, the milestone, what changed and why, files
 affected, and any effect on results. Future work is appended here as it is done.
+
+### 2026-11-01 — Milestone 05.2 S4–S7: analytical pages from the Claude Design prototype (uncommitted)
+
+**Why:** The Claude Design prototype (`index.html`, `scripts/`, `styles/`; brief in its
+`uploads/claude-design-prompt.md`) defines the top-navigation shell and the seven analytical pages.
+This step rebuilds it in the React app on the real bundle, replacing the S3 sidebar and placeholders.
+
+**Changed (`dashboard/`)**
+- Shell: the left sidebar is replaced by a sticky top bar (`src/components/layout/TopBar.tsx`).
+  - Below 75rem, the three reference sections move under a "Reference" menu.
+  - Below 56rem, all sections move into a menu panel: focus moves in, Escape closes it, and choosing a
+    section closes it.
+- The provenance bar is now a compact colophon, and a footer is added.
+  - Known issues and loader conditions are collapsed behind "N bundle notices".
+  - The notices open by themselves when a dataset failed.
+- Styles:
+  - `src/styles/tokens.css` gains the prototype's additions: travel-time, drive and share ramps; A3
+    category, reliability, scenario and facility-category colours; evidence surfaces.
+  - `src/styles/app.css` is the prototype stylesheet; `shell.css` is removed.
+- View state in the address (`src/model/view.ts`, `src/view.tsx`):
+  - group, walk threshold, mode, drive threshold and statistic are shared between pages;
+  - other parameters belong to their page;
+  - values outside the manifest's groups and thresholds fall back to the default.
+- Caveats (`src/components/notes.tsx`):
+  - numbered references and code chips open the statement text from `manifest.statements`;
+  - "Notes for this view" lists each statement used on the page once.
+- Pages (`src/pages/`):
+  - Overview.
+  - Accessibility Map: Leaflet, canvas cells, a barangay drawer and a table alternative.
+  - Barangay Analysis: sort and filter; ranks for ranking-eligible barangays only; a profile; compare
+    up to 3.
+  - Facilities: map, list, facility card and inventory.
+  - Network Connectivity: evidence only; analysis-only records are stamped "not applied".
+  - Data Quality.
+  - About / Methodology.
+- `src/contract/types.ts`: the network and provenance parts are now typed. If the bundle lacks a part,
+  only that panel says "could not be shown" (`guard()` in `States.tsx`).
+- Departures from the prototype:
+  - Every figure the prototype typed in (totals, counts, the A1 → A3 sentence, gap-card statuses) is
+    read or counted from the bundle.
+  - No basemap tiles are loaded, so the dashboard makes no request outside its bundle.
+  - Charts are SVG and HTML as in the prototype, not Chart.js.
+  - Leaflet is used directly and loaded on first use, not through react-leaflet.
+  - The design-only routes `#/components` and `#/states` are not built.
+- Tests:
+  - `test/shell.test.ts` is rewritten for the new shell and pages (23 tests).
+  - `test/realBundle.test.ts` renders every page from the real bundle. It checks the exported figures,
+    the distribution end point and the ranks.
+  - Vitest: 79 tests, all passing.
+
+**Checked in a browser on the real bundle**
+- All seven routes, with no console errors and no broken panel.
+- The map: cells, facilities, legend and barangay drawer.
+
+**Unchanged:** the bundle, `data/`, `vite/`, the loader and validation, Python code and tests.
+
+**Effect on results:** none (presentation only).
 
 ### 2026-11-01 — Milestone 05.2 S3: dashboard application shell (uncommitted)
 

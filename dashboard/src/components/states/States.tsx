@@ -1,20 +1,47 @@
 /**
- * Interface states shared by every page. Errors are announced (role="alert") and listed in full;
- * an unverified or newer bundle is stated, never implied to be fine.
+ * Interface states shared by every page. Errors are announced (role="alert") and listed in full; a
+ * dataset that did not load is named with its reasons and nothing is shown in its place; an empty
+ * filter result says so and offers to clear the filters.
  */
 import type { ReactNode } from "react";
 import type { Issue, LoadedBundle } from "../../data/loadBundle.ts";
 import { DATASET_NAMES, datasetState } from "../../model/shell.ts";
 import type { DatasetKey } from "../../routes.ts";
-import { StatusBadge } from "../StatusBadge.tsx";
+import { Badge, Icon } from "../ui.tsx";
 
 export function LoadingState() {
   return (
-    <div className="state state--loading" role="status" aria-live="polite">
-      <p className="state__title">Loading the dashboard bundle…</p>
-      <p>Every file is checked against the bundle manifest before anything is shown.</p>
+    <div className="loading state state--loading" role="status" aria-live="polite">
+      <p className="state__title">Loading the dashboard bundle</p>
+      <p className="small muted">About 10 MB, loaded once. Every file is checked against the manifest (size and SHA-256) before anything is shown.</p>
+      <div className="progress" role="progressbar" aria-label="Loading the bundle">
+        <div className="progress__bar skeleton" style={{ width: "100%" }} />
+      </div>
+      <ul className="dataset-list">
+        <li>
+          <code className="small">manifest.json</code>
+          <span>Manifest</span>
+          <Badge tone="info">Checking…</Badge>
+        </li>
+        {(Object.keys(DATASET_NAMES) as DatasetKey[]).map((k) => {
+          const [name, file] = splitName(DATASET_NAMES[k]);
+          return (
+            <li key={k}>
+              <code className="small">{file}</code>
+              <span>{name}</span>
+              <Badge tone="unknown">Waiting</Badge>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
+}
+
+/** "Citywide values (city.json)" -> ["Citywide values", "city.json"]. */
+function splitName(s: string): [string, string] {
+  const m = /^(.*) \((.*)\)$/.exec(s);
+  return m ? [m[1] as string, m[2] as string] : [s, ""];
 }
 
 export function IssueList({ issues }: { issues: Issue[] }) {
@@ -42,70 +69,50 @@ export function FatalState({ issues }: { issues: Issue[] }) {
   );
 }
 
-/** Bundle-wide notices shown above every page: integrity not verified, newer contract, failed datasets. */
-export function BundleNotices({ bundle }: { bundle: LoadedBundle }) {
-  const notices: ReactNode[] = [];
-  if (bundle.verification === "unavailable") {
-    notices.push(
-      <div key="integrity" className="state state--warn" role="status">
-        <p className="state__title">Integrity not verified</p>
-        <p>
-          File sizes were checked, but SHA-256 hashes could not be computed in this context (Web Crypto needs https
-          or localhost). The data is shown, unverified.
-        </p>
-      </div>,
-    );
-  }
-  if (bundle.compatibility.status === "newer_minor") {
-    notices.push(
-      <div key="version" className="state state--warn" role="status">
-        <p className="state__title">Newer bundle version</p>
-        <p>{bundle.compatibility.message}</p>
-      </div>,
-    );
-  }
-  const errors = bundle.issues.filter((i) => i.level === "error");
-  if (errors.length > 0) {
-    notices.push(
-      <div key="errors" className="state state--error" role="alert">
-        <p className="state__title">Some datasets could not be loaded</p>
-        <p>Pages that need them show what is missing. Other pages are unaffected.</p>
-        <IssueList issues={errors} />
-      </div>,
-    );
-  }
-  return <>{notices}</>;
-}
-
-/** Which datasets a page needs and whether they loaded; failed ones list their reasons. */
-export function DatasetAvailability({ bundle, datasets }: { bundle: LoadedBundle; datasets: DatasetKey[] }) {
+/** A panel whose dataset did not load: the dataset is named with its reasons; nothing replaces it. */
+export function Unavailable({ bundle, dataset, what = "This panel" }: { bundle: LoadedBundle; dataset: DatasetKey; what?: string }) {
+  const st = datasetState(bundle, dataset);
   return (
-    <ul className="dataset-list">
-      {datasets.map((k) => {
-        const st = datasetState(bundle, k);
-        return (
-          <li key={k} className="dataset-list__item">
-            <StatusBadge tone={st.status === "ok" ? "ok" : "error"}>{st.status === "ok" ? "Loaded" : "Unavailable"}</StatusBadge>
-            <span>{DATASET_NAMES[k]}</span>
-            {st.status === "failed" && (
-              <ul className="dataset-list__reasons">
-                {st.reasons.map((r, n) => (
-                  <li key={n}>{r}</li>
-                ))}
-              </ul>
-            )}
-          </li>
-        );
-      })}
-    </ul>
+    <div className="state state--unavailable" role="status">
+      <p className="state__title">
+        <Icon name="alert" /> {what} is unavailable
+      </p>
+      <p>
+        {DATASET_NAMES[dataset]} did not load{st.status === "failed" ? `: ${st.reasons.join("; ")}` : ""}. Nothing is shown in its place; the rest of the page uses other datasets and still works.
+      </p>
+    </div>
   );
 }
 
-export function EmptyState({ title, children }: { title: string; children?: ReactNode }) {
+/** A panel the bundle lacks fields for (a contract mismatch): stated, never filled in. */
+export function Broken({ what, error }: { what: string; error: unknown }) {
   return (
-    <div className="state state--empty">
+    <div className="state state--unavailable" role="status">
+      <p className="state__title">
+        <Icon name="alert" /> {what} could not be shown
+      </p>
+      <p>
+        The bundle does not contain the fields this panel reads (<code>{error instanceof Error ? error.message : String(error)}</code>). Nothing is shown in its place.
+      </p>
+    </div>
+  );
+}
+
+/** Render a panel; if the bundle lacks what it reads, show that instead of failing the whole page. */
+export function guard(what: string, render: () => ReactNode): ReactNode {
+  try {
+    return render();
+  } catch (e) {
+    return <Broken what={what} error={e} />;
+  }
+}
+
+export function EmptyState({ title, children, action }: { title: string; children?: ReactNode; action?: ReactNode }) {
+  return (
+    <div className="state state--empty" role="status">
       <p className="state__title">{title}</p>
       {children}
+      {action}
     </div>
   );
 }
