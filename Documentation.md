@@ -9,8 +9,9 @@ at the end**, newest first.
 - Repository: `abot` (Python package `abot`, v0.1.0)
 - Author: didyouseejay (carljohn.coopera@wvsu.edu.ph), West Visayas State University
 - Study area: Iloilo City, Iloilo, Western Visayas (Region VI), Philippines
-- Current state: **Milestone 05.2 S0–S2, uncommitted** (2026-11-01): frontend foundation in
-  `dashboard/` (React + Vite + TypeScript) with a verified bundle loader; no dashboard page yet.
+- Current state: **Milestone 05.2 S3, uncommitted** (2026-11-01): dashboard application shell
+  (navigation, provenance bar, interface states, seven placeholder sections) on the verified
+  bundle loader of S0–S2 (commit `c913983`); no analytical page yet.
   Before that, **Milestone 05.1** (2026-11-01): dashboard data exporter
   `abot export-dashboard` (contract `abot-dashboard v1.0.0`) writes a validated, derived bundle to
   `data/processed/dashboard/v1/`; no analytical result changed. Before that, **Milestone 04 +
@@ -202,7 +203,7 @@ You can run single build stages with `abot build --only population osm`.
 | [tests/test_m04.py](tests/test_m04.py) | Offline regression tests for Milestone 04 |
 | [src/abot/dashboard_data.py](src/abot/dashboard_data.py) | Dashboard data bundle per [docs/DASHBOARD_DATA_CONTRACT.md](docs/DASHBOARD_DATA_CONTRACT.md): read-only over the outputs, audit gate, deterministic cell chunks, validation of the written files, temporary-directory install, `--check` staleness report (Milestone 05.1) |
 | [tests/test_m05.py](tests/test_m05.py) | Regression tests for Milestone 05.1 and its M05.2 S0 hardening (28 offline unit tests; 2 end-to-end tests that read the real outputs read-only, write only to a temporary directory and are skipped without data) |
-| [dashboard/](dashboard/) | Static frontend (Milestone 05.2): React 19 + Vite 8 + TypeScript 7 (strict). `vite/bundlePlugin.ts` serves the bundle in development (read per request, never watched) and copies it, hash-checked, into `dist/data/v1/` at build; `src/contract/` types and version check; `src/data/` loader, validation, SHA-256, React context; `src/model/` catalogue, scenario names, formatting, distribution view, audit/Git states; `test/` Vitest suite with a hand-made fixture bundle |
+| [dashboard/](dashboard/) | Static frontend (Milestone 05.2): React 19 + Vite 8 + TypeScript 7 (strict). `vite/bundlePlugin.ts` serves the bundle in development (read per request, never watched) and copies it, hash-checked, into `dist/data/v1/` at build; `src/contract/` types and version check; `src/data/` loader, validation, SHA-256, React context; `src/model/` catalogue, scenario names, formatting, distribution view, audit/Git states; `test/` Vitest suite with a hand-made fixture bundle. S3: `src/routes.ts` (section registry), `src/components/` (shell layout, status badge, interface states), `src/pages/PlaceholderPage.tsx`, `src/model/shell.ts` (provenance items), `src/styles/{tokens,shell}.css` |
 
 ### Outputs (`data/processed/`)
 
@@ -538,7 +539,7 @@ evacuation and transport are descriptive-only categories (see Section 8).
 | `abot audit` (3 km baseline) | M02B: PASS 50, WARN 3, FAIL 0, INFO 11. M03 (with the experiment-run checks): PASS 54, WARN 4 (pending reviews, Guimaras facilities, stale `e7_buffer_3km`), FAIL 0, INFO 11. M04: PASS 55 (new archive `hist_e7_buffer_3km_m02` verified), WARN 4, FAIL 0, INFO 11. M04 follow-up: PASS 57 (A3 layer current; review restore point verified), WARN 3 (`e7_buffer_3km` cleared; 7 duplicates still pending), FAIL 0, INFO 11 |
 | Determinism (M04 + follow-up) | `abot components` under `PYTHONHASHSEED` 0 and 12345: all 17 evidence files and the A3 CSVs byte-identical (A3 GeoPackage identical in content); A1 reproduces the saved baseline, and baseline file hashes are unchanged on every run |
 
-### Unit tests (230 Python, all passing; 55 Vitest tests in `dashboard/test/`, all passing; the 13 Milestone 01 tests are listed here, 40 Milestone 02 tests are in `tests/test_m02.py`, 32 Milestone 02B tests in `tests/test_m02b.py`, 18 Milestone 03 tests in `tests/test_m03.py`, 97 Milestone 04 tests in `tests/test_m04.py`, 30 Milestone 05 tests in `tests/test_m05.py`, 2 of which read the real outputs and are skipped without them)
+### Unit tests (230 Python, all passing; 72 Vitest tests in `dashboard/test/`, all passing; the 13 Milestone 01 tests are listed here, 40 Milestone 02 tests are in `tests/test_m02.py`, 32 Milestone 02B tests in `tests/test_m02b.py`, 18 Milestone 03 tests in `tests/test_m03.py`, 97 Milestone 04 tests in `tests/test_m04.py`, 30 Milestone 05 tests in `tests/test_m05.py`, 2 of which read the real outputs and are skipped without them)
 
 - Conversion from old PSGC codes to COD-AB p-codes (3 cases).
 - Merging of OSM query tags (lists and "any value").
@@ -805,6 +806,54 @@ uv run pytest           # offline unit tests
 
 Newest entries first. Each entry records the date, the milestone, what changed and why, files
 affected, and any effect on results. Future work is appended here as it is done.
+
+### 2026-11-01 — Milestone 05.2 S3: dashboard application shell (uncommitted)
+
+**Why:** S3 sets out the dashboard's identity, layout, navigation and global states before any
+analytical page is built.
+
+**Added (`dashboard/`)**
+- Design tokens (`src/styles/tokens.css`): typography, spacing, a restrained deep-teal palette,
+  borders, surfaces, navigation states and status colours. Text contrast meets WCAG AA, and every
+  status shows a symbol and a word as well as a colour.
+- The shell (`src/components/layout/`) has:
+  - a skip link;
+  - a sidebar with the project identity, tagline and supporting phrase;
+  - section navigation that marks the active section with `aria-current="page"`;
+  - a header with a menu button for small screens;
+  - a provenance bar on every page.
+- Provenance bar (`src/model/shell.ts`): dataset version, generation time, integrity, audit, code
+  version and dataset availability, all read from the bundle.
+  - "OK" is shown only for verified, passed or clean states.
+  - Unverified integrity, a skipped audit and a dirty tree are warnings; unknown Git status is shown
+    as unknown.
+- Interface states (`src/components/states/`):
+  - loading (announced to screen readers);
+  - fatal error (every issue listed; navigation stays usable);
+  - bundle-wide notices: integrity not verified, newer contract, failed datasets;
+  - per-page dataset availability, with the reasons for anything that failed;
+  - an empty placeholder.
+- Seven routes registered once in `src/routes.ts`: Overview, Accessibility Map, Barangay Analysis,
+  Facilities, Network Connectivity, Data Quality, About / Methodology. All are placeholders that show
+  no values.
+- Routing:
+  - an unknown section falls back to Overview, and the address is corrected to match;
+  - each route change moves focus to the page heading and sets the document title.
+- Small screens (below 56rem): the navigation becomes a drawer. Opening it moves focus into the
+  menu; Escape closes it and returns focus to the button; choosing a section closes it.
+- 17 shell tests (`test/shell.test.ts`, rendered with react-dom/server; no new dependency).
+
+**Checked in a browser on the real bundle**
+- All 7 routes, the active-route marking and the focus moves.
+- The skip-link and focus rings.
+- The drawer cycle at 387 px width.
+- One defect found and fixed: on narrow screens the long Code badge was wider than the screen.
+  Badges now wrap.
+
+**Unchanged:** `vite/bundlePlugin.ts` and `vite.config.ts` (byte-identical), the bundle, `data/`,
+Python code and tests (230 passing).
+
+**Effect on results:** none.
 
 ### 2026-11-01 — Milestone 05.2 S0–S2: contract clarifications, exporter hardening, frontend foundation and data loader (uncommitted)
 
