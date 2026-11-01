@@ -9,7 +9,9 @@ at the end**, newest first.
 - Repository: `abot` (Python package `abot`, v0.1.0)
 - Author: didyouseejay (carljohn.coopera@wvsu.edu.ph), West Visayas State University
 - Study area: Iloilo City, Iloilo, Western Visayas (Region VI), Philippines
-- Current state: **Milestone 05.3, uncommitted** (2026-11-01): the dashboard front end redesigned for
+- Current state: **Milestone 06.0, uncommitted** (2026-11-01): technical audit and portfolio baseline
+  ([docs/M06_TECHNICAL_AUDIT.md](docs/M06_TECHNICAL_AUDIT.md)); assessment only, no code or result
+  changed. Before that, **Milestone 05.3** (commit `56fbd64`): the dashboard front end redesigned for
   residents and barangay/city officials (plain language, five public sections, street/satellite
   background maps); the technical pages move under "For researchers". No analytical result changed.
   Before that, **Milestone 05.2 S3** (2026-11-01): dashboard application shell
@@ -810,6 +812,85 @@ uv run pytest           # offline unit tests
 
 Newest entries first. Each entry records the date, the milestone, what changed and why, files
 affected, and any effect on results. Future work is appended here as it is done.
+
+### 2026-11-02 — Milestone 06.0: audit re-verified (assessment only; uncommitted)
+
+**Why:** The 2026-11-01 audit was re-checked independently before any M06 implementation relies on
+it.
+
+**Re-run and observed** (same commit `56fbd64`; nothing written under `data/` or `dashboard/dist/`):
+- pytest: 230 passed.
+- ruff check: passed.
+- ruff format --check: 8 files would be reformatted.
+- Vitest: 81 passed.
+- tsc (both configs): clean.
+- vite build: succeeded, 9 bundle files verified.
+- `abot audit --skip-hashes`: PASS 51 · WARN 3 · FAIL 0.
+- `export-dashboard --check`: current, commit `5ed16d2`, working tree not clean.
+
+`uv lock --check` was not re-run because `uv` was not on the PATH.
+
+**Changed:** [docs/M06_TECHNICAL_AUDIT.md](docs/M06_TECHNICAL_AUDIT.md). Corrections:
+- The per-file frontend test counts (loader 32, plugin 7, models 15).
+- The count of `any` in source: 0 (two in tests).
+- The M10 wording: six effects omit dependencies and justify it in comments; no lint suppressions
+  exist.
+- The claim that `uv` worked in PowerShell.
+
+**Added:** L6 (the production build ships source maps), a note that PyProj is used only through
+GeoPandas, and Appendix A recording the re-verification.
+
+**Effect on findings:** no severity changed, and the recommended next step (M06.1) stands.
+
+**Effect on results:** none.
+
+### 2026-11-01 — Milestone 06.0: technical audit and portfolio baseline (assessment only; uncommitted)
+
+**Why:** Milestone 06 prepares ABOT as a portfolio project for internship applications in GIS, data
+engineering and software development. This step measures the current state before any change is
+made.
+
+**Added:** [docs/M06_TECHNICAL_AUDIT.md](docs/M06_TECHNICAL_AUDIT.md). It covers architecture, data
+architecture, code quality, testing, reproducibility, documentation, technical debt, a portfolio
+scorecard and an M06 roadmap.
+
+**Checks run and observed** (nothing written under `data/`; the frontend build went to a temporary
+folder outside the repository):
+- pytest: 230 passed.
+- ruff check: passed.
+- ruff format --check: 8 files would be reformatted.
+- uv lock --check: consistent.
+- Vitest: 81 passed.
+- tsc (both configs): clean.
+- vite build: succeeded, with the bundle verified while copying.
+- `abot audit --skip-hashes`: PASS 51 · WARN 3 · FAIL 0.
+- `abot export-dashboard --check`: current, but the manifest records commit `5ed16d2` with a dirty
+  working tree.
+
+**Main findings:**
+- No Critical issues.
+- Five High issues, all about presentation and outside reproducibility, not correctness:
+  - the README is out of date (Milestone 02B, no dashboard);
+  - no demo, screenshots or sample data;
+  - no CI;
+  - no LICENSE;
+  - no architecture overview.
+- Medium issues include:
+  - `chart.js` and `react-leaflet` are installed but unused;
+  - the bundle provenance records uncommitted code;
+  - the OSM snapshot cannot be reproduced from a clone;
+  - very large modules;
+  - no end-to-end or browser tests.
+- The static-JSON design is judged appropriate. A REST API, PostgreSQL or PostGIS would not serve
+  any current requirement.
+
+**Recommended next step:** M06.1, "Make it visible". Add a LICENSE, an architecture document and a
+rewritten README with screenshots. Correct the stack description and remove the unused packages.
+Re-export the bundle from a clean commit.
+
+**Unchanged:** all application code, configuration, data, tests and Git history.
+
+**Effect on results:** none.
 
 ### 2026-11-01 — Milestone 05.3: public redesign of the dashboard, with background maps (uncommitted)
 
