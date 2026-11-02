@@ -71,15 +71,19 @@ def raster_cells(s: Settings, city: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
         elif (transform, arr.shape) != grid[:2]:
             raise ValueError(f"WorldPop {year} is not on the same grid as {years[0]}")
         values[year] = arr[0]
+    if grid is None:
+        raise ValueError("no WorldPop years configured (sources.worldpop.years is empty)")
     transform, _, row0, col0 = grid
     populated = np.zeros(values[years[0]].shape, dtype=bool)
     for band in values.values():
         populated |= ~np.ma.getmaskarray(band) & (band.filled(0) > 0)
-    rows, cols = np.nonzero(populated)
+    rows, cols = np.nonzero(populated)  # pyright: ignore[reportAssignmentType]  (numpy infers 1-D)
     x0, y0 = rasterio.transform.xy(transform, rows, cols, offset="ul")
     x1, y1 = rasterio.transform.xy(transform, rows, cols, offset="lr")
     cx, cy = rasterio.transform.xy(transform, rows, cols, offset="center")
-    data = {"cell_id": [f"r{r + row0}c{c + col0}" for r, c in zip(rows, cols, strict=True)]}
+    data: dict[str, object] = {
+        "cell_id": [f"r{r + row0}c{c + col0}" for r, c in zip(rows, cols, strict=True)]
+    }
     for year in years:
         data[f"wp{year}_cell"] = np.asarray(values[year].filled(0)[rows, cols], dtype="float64")
     cells = gpd.GeoDataFrame(data, geometry=shapely.box(x0, y1, x1, y0), crs=4326).to_crs(s.projected_crs)

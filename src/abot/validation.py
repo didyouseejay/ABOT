@@ -114,7 +114,7 @@ def assess_duplicate(row: dict) -> tuple[str, str, str]:
             "none for the indicators (an ATM is never a destination); optional street-level check",
         )
     overlap = row.get("polygon_overlap_of_smaller")
-    if pd.notna(overlap) and overlap >= CONTAINED_SHARE:
+    if pd.notna(overlap) and overlap >= CONTAINED_SHARE:  # pyright: ignore[reportOptionalOperand]
         return (
             "same_facility_confirmed_desk",
             (
@@ -124,7 +124,7 @@ def assess_duplicate(row: dict) -> tuple[str, str, str]:
             "choose which record to keep",
         )
     gap = row.get("osm_id_gap")
-    if row["tags_identical"] and pd.notna(gap) and gap <= SAME_SESSION_ID_GAP:
+    if row["tags_identical"] and pd.notna(gap) and gap <= SAME_SESSION_ID_GAP:  # pyright: ignore[reportOptionalOperand]
         return (
             "same_facility_confirmed_desk",
             (
@@ -603,7 +603,7 @@ def validation_map(s, cells, frags, gaps, ponds, facs, dup_pairs, path: Path) ->
         + "Dashed: shortest gap from a dropped fragment to the main network.<br>"
         "Desk evidence only; nothing here is applied.</div>"
     )
-    m.get_root().html.add_child(folium.Element(legend))
+    m.get_root().html.add_child(folium.Element(legend))  # pyright: ignore[reportAttributeAccessIssue]  (get_root() is the Figure)
     folium.LayerControl(collapsed=False).add_to(m)
     m.save(str(path))
 

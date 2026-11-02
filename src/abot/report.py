@@ -206,14 +206,14 @@ def write_map(s: Settings) -> None:
 
     centre = ind.union_all().centroid
     m = folium.Map(location=[centre.y, centre.x], zoom_start=13, tiles="OpenStreetMap")
-    m.get_root().html.add_child(
+    m.get_root().html.add_child(  # pyright: ignore[reportAttributeAccessIssue]  (get_root() is the Figure)
         folium.Element(
             '<div style="position:fixed;bottom:4px;left:4px;z-index:9999;background:rgba(255,255,255,.85);'
             f'padding:2px 6px;font:11px sans-serif;max-width:70%">ABOT · {ATTRIBUTION}</div>'
         )
     )
 
-    m.get_root().html.add_child(
+    m.get_root().html.add_child(  # pyright: ignore[reportAttributeAccessIssue]  (get_root() is the Figure)
         folium.Element(
             '<div style="position:fixed;top:8px;left:50px;z-index:9999;background:rgba(255,255,255,.92);'
             f'padding:6px 8px;font:12px sans-serif;max-width:420px">{READ_ME.replace("**", "")}</div>'

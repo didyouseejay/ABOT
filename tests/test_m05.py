@@ -133,7 +133,8 @@ def test_distribution_without_any_citywide_time():
 
 def _ctx():
     sv = {"audit": {"status": "not_run"}}
-    return D.Ctx(CFG, None, "2026-11-01T00:00:00+00:00", sv, [], {})
+    # No Sources: the chunking code under test never reads them.
+    return D.Ctx(CFG, None, "2026-11-01T00:00:00+00:00", sv, [], {})  # pyright: ignore[reportArgumentType]
 
 
 def _feats(n):

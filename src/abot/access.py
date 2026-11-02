@@ -113,7 +113,7 @@ def access_assessment(tags: dict, gate: bool = False) -> dict:
     if hw is not None:
         notes.append(f"highway={hw} recorded, not used")
     if cls == "pedestrian_override":
-        group = GROUP[acc]
+        group = GROUP[acc]  # pyright: ignore[reportArgumentType]  (acc is set: see the foot branch)
     else:
         group = GROUP[cls]
     return {

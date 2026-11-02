@@ -117,17 +117,18 @@ class BarrierChecker:
         """True if the connector crosses a watercourse/coastline away from the origin, or runs
         more than `tol` metres through a water area that does not contain the origin."""
         zone = origin.buffer(radius) if radius > 0 else None
+        # numpy types an element of these object arrays as ndarray, not a geometry (the pyright ignores).
         if self.line_tree is not None:
             for i in self.line_tree.query(connector, predicate="intersects"):
                 hit = connector.intersection(self.lines[i])
-                if zone is None or not hit.difference(zone).is_empty:
+                if zone is None or not hit.difference(zone).is_empty:  # pyright: ignore[reportAttributeAccessIssue]
                     return True
         if self.area_tree is not None:
             for i in self.area_tree.query(connector, predicate="intersects"):
                 area = self.areas[i]
-                if area.contains(origin):
+                if area.contains(origin):  # pyright: ignore[reportAttributeAccessIssue]
                     continue
-                if connector.intersection(area).length > self.tol:
+                if connector.intersection(area).length > self.tol:  # pyright: ignore[reportAttributeAccessIssue]
                     return True
         return False
 
@@ -155,19 +156,20 @@ def connect_point(
     if len(idx) == 0:
         return Connection(nearest_m=edges.nearest_distance(pt), status=BEYOND)
     for n, (i, d) in enumerate(zip(idx, dist, strict=True)):
+        # numpy types an element of these object arrays as ndarray, not a geometry (the pyright ignores).
         line = edges.geoms[i]
-        s = line.project(pt)
-        cp = line.interpolate(s)
+        s = line.project(pt)  # pyright: ignore[reportAttributeAccessIssue]
+        cp = line.interpolate(s)  # pyright: ignore[reportAttributeAccessIssue]
         connector = LineString([pt, cp]) if d > 0 else None
         if connector is not None and barriers.blocked(pt, connector, radius):
             continue
-        frac = s / line.length if line.length > 0 else 0.0
+        frac = s / line.length if line.length > 0 else 0.0  # pyright: ignore[reportAttributeAccessIssue]
         a_u = frac * edges.length[i]
         return Connection(
             u=edges.u[i],
             v=edges.v[i],
-            a_u=a_u,
-            a_v=edges.length[i] - a_u,
+            a_u=a_u,  # pyright: ignore[reportArgumentType]
+            a_v=edges.length[i] - a_u,  # pyright: ignore[reportArgumentType]
             conn_m=float(d),
             nearest_m=float(dist[0]),
             status=OK,

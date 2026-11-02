@@ -348,7 +348,7 @@ def tag_values(value) -> list[str]:
     return [v.strip() for v in value.split(";") if v.strip()]
 
 
-def _tags_match(row, tags: dict) -> list[str]:
+def _tags_match(row, tags: dict | None) -> list[str]:
     """Return the `key=value` strings in `row` that match `tags` (empty list = no match)."""
     hits = []
     for key, wanted in (tags or {}).items():
@@ -358,7 +358,7 @@ def _tags_match(row, tags: dict) -> list[str]:
     return hits
 
 
-def _regex_match(row, patterns: dict) -> list[str]:
+def _regex_match(row, patterns: dict | None) -> list[str]:
     hits = []
     for key, pattern in (patterns or {}).items():
         v = row.get(key)

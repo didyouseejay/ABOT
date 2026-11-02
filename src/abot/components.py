@@ -1158,7 +1158,7 @@ def _md(df: pd.DataFrame, index: bool = True) -> str:
 def snapshot_readme_lines(snapshot: dict | None, gap: pd.DataFrame) -> list[str]:
     """README section for the targeted snapshot: what was obtained and what it does and does not show."""
     st = (snapshot or {}).get("status", {"obtained": False})
-    if not st.get("obtained"):
+    if snapshot is None or not st.get("obtained"):
         return ["## Targeted snapshot evidence", "",
                 (f"**No targeted snapshot present.** The gap measurements above use the cache only "
                  f"({CACHE_SCOPE})."), ""]  # fmt: skip

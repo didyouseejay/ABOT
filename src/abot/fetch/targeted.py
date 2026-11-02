@@ -294,7 +294,7 @@ def corridor_analysis(
         for wid in ids:
             ns = sways[wid]["nodes"]
             for a, b in zip(ns, ns[1:], strict=False):
-                H.add_edge(a, b, length=_m(ll(a), ll(b)), way=wid)
+                H.add_edge(a, b, length=_m(ll(a), ll(b)), way=wid)  # pyright: ignore[reportArgumentType]
         touch: dict[str, list] = {}
         for n in sorted(H.nodes):
             for c in sorted(node_comp.get(n, ())):

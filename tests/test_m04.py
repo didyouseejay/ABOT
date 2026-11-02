@@ -3,6 +3,7 @@ the targeted Overpass query, the historical archive and review-decision preserva
 synthetic data, real configuration rules."""
 
 import json
+from collections.abc import Mapping, Sequence
 
 import geopandas as gpd
 import networkx as nx
@@ -22,7 +23,7 @@ CFG = Settings(read_config(DEFAULT_CONFIG))
 NO_BARRIERS = A.BarrierChecker(None, 20)
 
 
-def _graph(paths: dict[int, list[tuple[float, float]]]) -> nx.MultiDiGraph:
+def _graph(paths: Mapping[int, Sequence[tuple[float, float]]]) -> nx.MultiDiGraph:
     """Two-way walk graph from {first node id: [(x, y), ...]} polylines (node ids are consecutive)."""
     G = nx.MultiDiGraph()
     for start, pts in paths.items():

@@ -406,7 +406,7 @@ def _base_map(gdf4326) -> folium.Map:
         attr="Esri World Imagery",
         name="Imagery (Esri)",
     ).add_to(m)
-    m.get_root().html.add_child(
+    m.get_root().html.add_child(  # pyright: ignore[reportAttributeAccessIssue]  (get_root() is the Figure)
         folium.Element(
             '<div style="position:fixed;bottom:4px;left:4px;z-index:9999;background:rgba(255,255,255,.85);'
             f'padding:2px 6px;font:11px sans-serif;max-width:70%">ABOT review · {ATTRIBUTION}</div>'
@@ -530,7 +530,7 @@ def unconnected_map(s: Settings, cells: gpd.GeoDataFrame, connectors: gpd.GeoDat
         "Magenta outline: priority barangays. Nothing here changes the analysis; these residents stay in "
         "every denominator and are reported as not connected.</div>"
     )
-    m.get_root().html.add_child(folium.Element(legend))
+    m.get_root().html.add_child(folium.Element(legend))  # pyright: ignore[reportAttributeAccessIssue]  (get_root() is the Figure)
     folium.LayerControl(collapsed=False).add_to(m)
     m.save(path)
 

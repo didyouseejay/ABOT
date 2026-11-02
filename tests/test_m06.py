@@ -12,6 +12,7 @@ a temporary directory, and are skipped without them."""
 import json
 from pathlib import Path
 from types import SimpleNamespace
+from typing import cast
 
 import pandas as pd
 import pytest
@@ -37,12 +38,14 @@ def _m04(tmp_path, status: dict | None, corridors: str | None = None):
     return s, m04
 
 
-def _src(status: dict, corr: pd.DataFrame, gap_obtained: bool, manifest_sha: str | None):
+def _src(status: dict, corr: pd.DataFrame, gap_obtained: bool, manifest_sha: str | None) -> D.Sources:
+    """A stand-in for D.Sources with only the fields snapshot_checks reads."""
     manifest = {"osm_cache/x.json": {"sha256": "b" * 64}}
     if manifest_sha:
         manifest["osm_targeted/m04_gaps_20261031T131445Z.json"] = {"sha256": manifest_sha}
     gapinv = pd.DataFrame({"fragment": ["F001", "F100", "F101"], "snapshot_obtained": [gap_obtained] * 3})
-    return SimpleNamespace(snapshot_status=status, corr=corr, gapinv=gapinv, raw_manifest=manifest)
+    ns = SimpleNamespace(snapshot_status=status, corr=corr, gapinv=gapinv, raw_manifest=manifest)
+    return cast(D.Sources, ns)
 
 
 CORRIDOR_CSV = (
