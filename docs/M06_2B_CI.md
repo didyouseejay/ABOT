@@ -218,5 +218,7 @@ Run 41376541056 on commit `a594551`:
 The test recorded two stages back to back, and the stamps have millisecond resolution. On the Linux
 runner both records fell in the same millisecond, so the "later" stage was not later. The audit was
 right and the test was racy. The test now sets the second stamp explicitly 1 s later, with the
-assertion unchanged (Documentation.md §10, "CI fix" entry). Whether the next run passes is known
-only after it runs on GitHub.
+assertion unchanged (Documentation.md §10, "CI fix" entry).
+
+**Run 41377198195 on commit `7444229`: success.** Both jobs passed on `ubuntu-latest`. This is the
+first green run, and it resolves limitation 3 for the code paths that CI exercises.

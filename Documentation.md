@@ -14,7 +14,7 @@ at the end**, newest first.
 - Current state: **Milestone 06.2B** (commit `a594551`, 2026-11-02): GitHub Actions CI
   ([docs/M06_2B_CI.md](docs/M06_2B_CI.md)) checks the Python package and the dashboard on every push
   and pull request to `main`, without `data/`. Its first run failed one timing-sensitive test on
-  Linux; the test fix is **uncommitted**. Before that, **Milestone 06.2A follow-up** (commit
+  Linux. The test fix (commit `7444229`) made both jobs pass on GitHub (run 41377198195). Before that, **Milestone 06.2A follow-up** (commit
   `86d9797`): archive-aware validation.
   Without any `data/archive/` the archive-dependent checks are NOT PERFORMED, never passed, and a
   fresh clone can export; they stay strict whenever archives exist (contract `abot-dashboard`
@@ -831,7 +831,14 @@ uv run pytest           # offline unit tests
 Newest entries first. Each entry records the date, the milestone, what changed and why, files
 affected, and any effect on results. Future work is appended here as it is done.
 
-### 2026-11-02 — CI fix: deterministic stage order in the staleness test (uncommitted)
+### 2026-11-02 — CI passing on GitHub (uncommitted note)
+
+GitHub Actions run 41377198195 on commit `7444229` completed with **success**: both the Python and
+Dashboard jobs passed on `ubuntu-latest`. This is the first green CI run and the first verification
+on Linux, and the README badge now reflects it. Documentation only: this entry, the current state,
+and §11 of [docs/M06_2B_CI.md](docs/M06_2B_CI.md).
+
+### 2026-11-02 — CI fix: deterministic stage order in the staleness test (commit `7444229`)
 
 **Why:** The first GitHub Actions run (commit `a594551`, run 41376541056) failed in one test,
 `tests/test_m02b.py::test_audit_detects_stale_stage_order`, with `assert 'PASS' == 'FAIL'`. The
@@ -851,7 +858,7 @@ race never showed locally. The dashboard job, ruff and the other 242 run tests p
 correct: an upstream stage that finished at the same instant is not "rebuilt after".
 
 **Verified (2026-11-02, Windows):** `ruff check .` passed; `ruff format` reports the file already
-formatted; pytest 250 passed. Not yet verified on GitHub: that needs the next push.
+formatted; pytest 250 passed. On GitHub, run 41377198195 passed (see the entry above).
 
 **Effect on results:** none (test-only change).
 
