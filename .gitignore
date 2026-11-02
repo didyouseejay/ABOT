@@ -17,6 +17,8 @@ data/
 cache/
 .ruff_cache/
 .pytest_cache/
+# JUnit report written by the CI test step (`pytest --junitxml=pytest-results.xml`)
+pytest-results.xml
 
 # Frontend (dashboard/) dependencies
 node_modules/

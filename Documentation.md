@@ -11,7 +11,10 @@ at the end**, newest first.
 - Licence: source code MIT ([LICENSE](LICENSE), since Milestone 06.1); data keeps its own licences
   ([docs/ATTRIBUTION.md](docs/ATTRIBUTION.md))
 - Study area: Iloilo City, Iloilo, Western Visayas (Region VI), Philippines
-- Current state: **Milestone 06.2A follow-up, uncommitted** (2026-11-02): archive-aware validation.
+- Current state: **Milestone 06.2B, uncommitted** (2026-11-02): GitHub Actions CI
+  ([docs/M06_2B_CI.md](docs/M06_2B_CI.md)) checks the Python package and the dashboard on every push
+  and pull request to `main`, without `data/`. Before that, **Milestone 06.2A follow-up** (commit
+  `86d9797`): archive-aware validation.
   Without any `data/archive/` the archive-dependent checks are NOT PERFORMED, never passed, and a
   fresh clone can export; they stay strict whenever archives exist (contract `abot-dashboard`
   1.1.0). Before that, **Milestone 06.2A** (commit `8ff8aea`): the targeted gap snapshot became
@@ -827,7 +830,61 @@ uv run pytest           # offline unit tests
 Newest entries first. Each entry records the date, the milestone, what changed and why, files
 affected, and any effect on results. Future work is appended here as it is done.
 
-### 2026-11-02 — Milestone 06.2A follow-up: archive-aware validation (uncommitted)
+### 2026-11-02 — Milestone 06.2B: GitHub Actions continuous integration (uncommitted)
+
+**Why:** The audit (H3) found no CI. The tests ran only on the author's machine, and nothing showed
+a reviewer that they pass. Full documentation: [docs/M06_2B_CI.md](docs/M06_2B_CI.md).
+
+**Added:**
+- `.github/workflows/ci.yml`, triggered by pushes and pull requests to `main`, with
+  `contents: read` permissions, a concurrency group (pull-request runs cancel older ones; `main`
+  runs are never cancelled), no secrets, and no artifacts or deployment. Two independent jobs:
+  - **Python:** uv 0.13.6, `uv python install` (from `.python-version`), `uv sync --locked`,
+    `uv run ruff check .`, `uv run pytest -ra --junitxml=pytest-results.xml`, then a job summary.
+  - **Dashboard:** Node 24 with npm cache, then `npm ci`, `npm run typecheck`, `npm test` and
+    `npm run build`.
+
+  Actions are pinned to commit SHAs: checkout v7.0.1, setup-node v7.1.0, setup-uv v10.3.3.
+- `.github/scripts/pytest_summary.py`: standard library only. It reports totals, passed, failed,
+  errors and skipped, and lists every skip with its reason.
+
+**Changed:**
+- `README.md`: CI badge (`didyouseejay/ABOT`, public), a CI paragraph in the testing section, and
+  the lint command changed to `ruff check .`.
+- `.gitignore`: `pytest-results.xml`.
+
+**Verified (2026-11-02):**
+- **Fresh clone of `86d9797` without `data/`:**
+  - `uv sync --locked` OK;
+  - `ruff check .` passed;
+  - pytest 243 passed, 7 skipped. Every skip is a data-dependent test with its reason: 5 "analytical
+    outputs not present", 1 "A3 layer not built", 1 "archive not present".
+  - `npm ci` OK; typecheck clean; Vitest 80 passed, 2 skipped (real bundle);
+  - `npm run build` OK with the designed "no bundle" warning.
+- **Working repository:** `uv lock --check` OK; `ruff check .` passed; pytest 250 passed;
+  Vitest 82 passed; build OK.
+- **Not verified:** GitHub Actions has not been run yet. The first run on GitHub will show whether
+  it passes on the Linux runner.
+
+**Effect on results:** none. No application, analytical or test code changed, the bundle is
+untouched, and no dependency was added.
+
+### 2026-11-02 — Data quality screenshot refreshed (uncommitted)
+
+**Why:** The bundle was re-exported from the clean commit `86d9797` (contract 1.1.0, `clean: True`).
+The old screenshot showed the earlier bundle with `GIT-DIRTY`.
+
+**Changed:**
+- `docs/assets/screenshots/quality.png`: re-captured from the running dashboard. It shows:
+  - contract 1.1.0;
+  - commit `86d9797`, clean working tree;
+  - audit 58 PASS · 3 WARN · 0 FAIL;
+  - only `AUDIT-WARN` among the known issues.
+- `README.md`: the screenshot caption no longer mentions `GIT-DIRTY`.
+
+**Effect on results:** none.
+
+### 2026-11-02 — Milestone 06.2A follow-up: archive-aware validation (commit `86d9797`)
 
 **Why:** The author approved the proposal in [docs/M06_2A_REPRODUCIBILITY.md](docs/M06_2A_REPRODUCIBILITY.md)
 §3.3. An entirely absent `data/archive/`, as in a fresh clone, must not block the export.

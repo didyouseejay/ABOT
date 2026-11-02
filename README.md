@@ -1,5 +1,7 @@
 # ABOT
 
+[![CI](https://github.com/didyouseejay/ABOT/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/didyouseejay/ABOT/actions/workflows/ci.yml)
+
 **Geospatial Accessibility and Public Infrastructure Intelligence System**
 *Bringing essential services within reach.*
 
@@ -84,9 +86,9 @@ Captured from the running dashboard (`npm run dev`) with the current bundle, at 
 |---|---|
 | ![Facilities page](docs/assets/screenshots/facilities.png) | ![Network connectivity page](docs/assets/screenshots/network.png) |
 
-The Data quality page ([screenshot](docs/assets/screenshots/quality.png)) shows the audit result and
-known issues. In this bundle it shows `GIT-DIRTY`, because the bundle was exported before the code
-was committed. Re-exporting from a clean commit clears it.
+The Data quality page ([screenshot](docs/assets/screenshots/quality.png)) shows the bundle's
+provenance: contract version, the commit it was exported from (clean working tree), integrity
+verification, the audit result (58 PASS · 3 WARN · 0 FAIL) and the known issues.
 
 ## Selected findings
 
@@ -166,6 +168,7 @@ limits and the design reasoning.
 
 ```
 abot/
+├── .github/               CI workflow (ci.yml) and its test-summary script
 ├── src/abot/              Python package and CLI (`abot`)
 │   ├── fetch/             Downloads and provenance manifest
 │   ├── boundaries.py      City and barangay polygons
@@ -264,7 +267,7 @@ npm run preview       # serve the production build locally
 ```bash
 # Python
 uv run pytest                        # 250 tests; tests that need data/ skip without it
-uv run ruff check src tests          # lint
+uv run ruff check .                  # lint
 
 # Dashboard (in dashboard/)
 npm test                             # Vitest: 82 tests
@@ -275,6 +278,15 @@ npm run build                        # production build with bundle verification
 uv run abot audit                    # analytical audit (read-only)
 uv run abot export-dashboard --check # bundle staleness (read-only)
 ```
+
+**Continuous integration.** [GitHub Actions](https://github.com/didyouseejay/ABOT/actions/workflows/ci.yml)
+runs the Python and dashboard checks above on every push and pull request to `main`, without
+`data/`.
+- In that clean environment, 7 Python tests and 2 dashboard tests that need local analytical
+  outputs, archives or the bundle skip by design. The job summary lists each skip and its reason.
+- The `abot` data commands (`fetch`, `build`, `components`, `export-dashboard`, `audit`) are not
+  run in CI.
+- Details are in [docs/M06_2B_CI.md](docs/M06_2B_CI.md).
 
 The 2026-11-02 results of these checks are recorded in the change log of
 [Documentation.md](Documentation.md) and in [docs/M06_TECHNICAL_AUDIT.md](docs/M06_TECHNICAL_AUDIT.md).

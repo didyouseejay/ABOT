@@ -1,0 +1,90 @@
+# Continuous integration for ABOT (Milestone 06.2B; see docs/M06_2B_CI.md).
+# Verifies the Python package and the dashboard WITHOUT local data: no data/, no archives, no dashboard
+# bundle, no Overpass or download step. Tests that need data/ skip by design and are listed in the
+# job summary. Nothing is deployed and no artifact is uploaded.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Read-only token; no secrets are used.
+permissions:
+  contents: read
+
+# One run per branch or pull request: a newer push cancels an older pull-request run. Runs on main are
+# never cancelled, so every commit on main gets a complete result.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  python:
+    name: Python (lint and tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install uv 0.13.6
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.13.6"
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Install Python (version from .python-version)
+        run: uv python install
+
+      - name: Install the locked dependencies (project + dev group)
+        run: uv sync --locked
+
+      - name: Lint (ruff)
+        run: uv run ruff check .
+
+      - name: Test (pytest)
+        run: uv run pytest -ra --junitxml=pytest-results.xml
+
+      - name: Test summary
+        if: ${{ !cancelled() }}
+        run: python3 .github/scripts/pytest_summary.py pytest-results.xml
+
+  dashboard:
+    name: Dashboard (types, tests, build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: dashboard
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
+
+      - name: Install the locked dependencies
+        run: npm ci
+
+      - name: Type check (app and build configuration)
+        run: npm run typecheck
+
+      - name: Test (Vitest)
+        run: npm test
+
+      # Without a bundle the build succeeds and warns "no bundle ... the build has no data" (by design:
+      # data/ is not in Git). The real-bundle tests skip for the same reason.
+      - name: Production build
+        run: npm run build
