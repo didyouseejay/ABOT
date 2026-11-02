@@ -52,7 +52,17 @@ export interface SourceValidation {
   a1_reproduces_baseline: boolean;
   baseline_outputs_unchanged: boolean;
   baseline_hashes_match_disk: boolean;
-  component_classes_check: { reference: string | null; components_compared: number; identical: boolean };
+  /**
+   * V-S4. 1.1.0: `status` and `reason` added; `not_performed` (no data/archive/ at export) has
+   * `identical` and `components_compared` null. Absent `status` (a 1.0.x bundle) means performed.
+   */
+  component_classes_check: {
+    status?: "performed" | "not_performed";
+    reference: string | null;
+    components_compared: number | null;
+    identical: boolean | null;
+    reason?: string | null;
+  };
 }
 
 export interface KnownIssue {

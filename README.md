@@ -68,7 +68,7 @@ deserves field verification. They are not intended for allocating resources on t
   ranking-eligible barangays are ranked.
 - **Read-only audit** (`abot audit`) with PASS/WARN/FAIL checks of inputs, staleness and
   consistency. A FAIL blocks the dashboard export.
-- **Versioned, verified data bundle.** Contract `abot-dashboard` 1.0.1, with SHA-256 checked at
+- **Versioned, verified data bundle.** Contract `abot-dashboard` 1.1.0, with SHA-256 checked at
   export, at build and in the browser. A failed dataset degrades only its own panels.
 - **Static dashboard** with eight pages. It needs no server, API or database to run.
 
@@ -139,7 +139,7 @@ flowchart LR
   S["Open data<br/>COD-AB · PSA 2020 · WorldPop · OpenStreetMap"] --> P["Python pipeline<br/>fetch → build → components → audit"]
   P --> G["Authoritative outputs<br/>GeoPackage + CSVs"]
   G --> E["abot export-dashboard<br/>audit gate · validation · SHA-256 manifest"]
-  E --> B["Static JSON bundle<br/>abot-dashboard 1.0.1"]
+  E --> B["Static JSON bundle<br/>abot-dashboard 1.1.0"]
   B --> D["React dashboard<br/>verifies hashes · Leaflet maps"]
 ```
 
@@ -177,10 +177,10 @@ abot/
 │   ├── audit.py           Read-only PASS/WARN/FAIL audit
 │   └── dashboard_data.py  Dashboard bundle exporter and validator
 ├── config/                settings.yaml and experiment configurations
-├── tests/                 pytest suite (230 tests)
+├── tests/                 pytest suite (250 tests)
 ├── dashboard/             React + TypeScript + Vite dashboard
 │   ├── src/               contract types, loader, models, pages, map
-│   ├── test/              Vitest suite (81 tests)
+│   ├── test/              Vitest suite (82 tests)
 │   └── vite/              bundle plugin (serve in dev, copy and verify at build)
 ├── docs/                  Architecture, methodology, data sources, contract, audits
 ├── Documentation.md       Research log and change log
@@ -224,10 +224,17 @@ uv run abot export-dashboard     # write the dashboard bundle to data/processed/
   - `abot components` records which case applies in `review/m04/snapshot_status.json`. The exporter
     checks that declaration (V-S5): it refuses a snapshot downloaded after `components` ran, or
     left over from another run, and asks you to re-run `abot components`.
-- **Fresh clones cannot export yet.** The exporter's integrity checks compare against the author's
-  local archives (`data/archive/`), which are not distributed. The audit requires the Milestone 01
-  archive, and check V-S4 requires the pre-taxonomy component reference. See
-  [docs/M06_2A_REPRODUCIBILITY.md](docs/M06_2A_REPRODUCIBILITY.md).
+- **Fresh clones (no `data/archive/`):**
+  - Two checks compare against the author's local archives, which are not distributed: the Milestone
+    01 archive check, and the comparison of component classes with the pre-taxonomy reference
+    (V-S4).
+  - When the whole `data/archive/` directory is absent, both are reported as **not performed**,
+    never as passed, and the export can go ahead. The bundle then carries the known issue
+    `ARCHIVE-CHECKS-NOT-PERFORMED`.
+  - When `data/archive/` exists, both checks are strict.
+  - Producing a bundle this way does **not** reproduce the published results (see
+    [Reproducibility limitations](#reproducibility-limitations) and
+    [docs/M06_2A_REPRODUCIBILITY.md](docs/M06_2A_REPRODUCIBILITY.md) §10).
 - Single build stages: `uv run abot build --only population osm`.
 - All parameters are in [config/settings.yaml](config/settings.yaml).
 - Experiment configurations in `config/experiments/` extend the baseline and write to their own
@@ -256,11 +263,11 @@ npm run preview       # serve the production build locally
 
 ```bash
 # Python
-uv run pytest                        # 230 tests; tests that need data/ skip without it
+uv run pytest                        # 250 tests; tests that need data/ skip without it
 uv run ruff check src tests          # lint
 
 # Dashboard (in dashboard/)
-npm test                             # Vitest: 81 tests
+npm test                             # Vitest: 82 tests
 npm run typecheck                    # tsc for the app and the build configuration
 npm run build                        # production build with bundle verification
 

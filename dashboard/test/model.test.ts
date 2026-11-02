@@ -119,7 +119,8 @@ describe("versions and routes", () => {
     expect(parseVersion("1.2.3")).toEqual({ major: 1, minor: 2, patch: 3 });
     expect(parseVersion("1.2")).toBeNull();
     expect(checkCompatibility("abot-dashboard", "1.0.9").status).toBe("compatible");
-    expect(checkCompatibility("abot-dashboard", "1.1.0").status).toBe("newer_minor");
+    expect(checkCompatibility("abot-dashboard", "1.1.0").status).toBe("compatible");
+    expect(checkCompatibility("abot-dashboard", "1.2.0").status).toBe("newer_minor");
     expect(checkCompatibility("abot-dashboard", "0.9.0").status).toBe("incompatible");
   });
   it("reads hash routes with a fallback", () => {

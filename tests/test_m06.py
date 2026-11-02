@@ -2,17 +2,24 @@
 
 `abot components` writes review/m04/snapshot_status.json on every run and the corridor table only when
 a targeted snapshot (`abot fetch-gaps --allow-download`) exists. The exporter must accept both states
-as declared and refuse every inconsistent combination (V-S5). Offline; the end-to-end test reads the
-real outputs read-only, writes only to a temporary directory, and is skipped without them."""
+as declared and refuse every inconsistent combination (V-S5).
+
+Follow-up: archive-aware validation. Without any data/archive/ (a fresh clone) the archive-dependent
+checks are NOT PERFORMED (audit WARN, V-S4 `not_performed`), never passed; whenever data/archive/
+exists they stay strict. Offline; the end-to-end tests read the real outputs read-only, write only to
+a temporary directory, and are skipped without them."""
 
 import json
+from pathlib import Path
 from types import SimpleNamespace
 
 import pandas as pd
 import pytest
 
+from abot import audit
 from abot import dashboard_data as D
 from abot.config import DEFAULT_CONFIG, Settings, read_config
+from abot.fetch.common import sha256
 
 CFG = Settings(read_config(DEFAULT_CONFIG))
 HAVE_DATA = (CFG.processed_dir / "component_aware" / "run_info.json").exists() and CFG.gpkg.exists()
@@ -141,3 +148,155 @@ def test_export_without_a_snapshot_marks_the_evidence_as_not_examined(tmp_path, 
             new = json.loads((v1 / name).read_text(encoding="utf-8"))
             old = json.loads((installed / name).read_text(encoding="utf-8"))
             assert all(new[k] == old[k] for k in keys)
+
+
+# --- archive-aware validation (M06.2A follow-up) ---------------------------------------------------
+
+REF = Path("archive") / "review_m04_pre_access_taxonomy" / "review_m04" / "component_inventory.csv"
+COMPARED = {"reference": "data/" + REF.as_posix(), "components_compared": 112, "identical": True}
+NOT_COMPARED = {"reference": None, "note": "pre-taxonomy reference archive absent: not compared"}
+
+
+def _project(tmp_path, archive: bool = False, m01: bool = False, reference: bool = False) -> Settings:
+    s = Settings(CFG.raw, root=tmp_path)
+    arch = s.data_dir / "archive"
+    if archive:
+        arch.mkdir(parents=True)
+    if m01:
+        f = arch / "m01_3edc0dd" / "barangay_access.csv"
+        f.parent.mkdir(parents=True)
+        f.write_text("a\n1\n", encoding="utf-8")
+        rec = {"archive": "m01_3edc0dd", "recorded_utc": "x", "files": {"barangay_access.csv": sha256(f)}}
+        (arch / "m01_3edc0dd.sha256.json").write_text(json.dumps(rec), encoding="utf-8")
+    if reference:
+        (s.data_dir / REF).parent.mkdir(parents=True)
+        (s.data_dir / REF).write_text("fragment\nmain\n", encoding="utf-8")
+    return s
+
+
+def _archive_findings(s):
+    a = audit.Audit(s, DEFAULT_CONFIG)
+    a.check_archive()
+    return {f.check: f for f in a.findings}
+
+
+def test_absent_archive_tree_is_not_performed_never_passed(tmp_path):
+    s = _project(tmp_path)
+    f = _archive_findings(s)
+    assert list(f) == ["m01_archive_present"]
+    m01 = f["m01_archive_present"]
+    assert (
+        m01.status == audit.WARN
+        and m01.detail.startswith(audit.NOT_PERFORMED)
+        and "data/archive/ absent" in m01.detail
+    )
+    block, bad = D.classes_check(s, NOT_COMPARED)
+    assert bad == [] and block["status"] == "not_performed"
+    assert block["identical"] is None and block["components_compared"] is None and "absent" in block["reason"]
+    assert not (tmp_path / "data").exists()  # nothing created
+
+
+def test_complete_archive_with_valid_references_passes_strictly(tmp_path):
+    s = _project(tmp_path, archive=True, m01=True, reference=True)
+    f = _archive_findings(s)
+    assert f["m01_archive_present"].status == audit.PASS and f["m01_3edc0dd"].status == audit.PASS
+    block, bad = D.classes_check(s, COMPARED)
+    assert bad == [] and block == {**COMPARED, "status": "performed", "reason": None}
+
+
+def test_archive_present_but_missing_references_fails(tmp_path):
+    # the M01 archive missing from an existing archive tree stays a FAIL
+    s = _project(tmp_path, archive=True, reference=True)
+    assert _archive_findings(s)["m01_archive_present"].status == audit.FAIL
+    # the taxonomy reference missing from an existing archive tree: no comparison possible -> V-S4
+    s = _project(tmp_path / "b", archive=True, m01=True)
+    _, bad = D.classes_check(s, NOT_COMPARED)
+    assert len(bad) == 1 and bad[0].startswith("V-S4") and "incomplete archive" in bad[0]
+    # a comparison recorded earlier whose reference has since disappeared from the archive
+    _, bad = D.classes_check(s, COMPARED)
+    assert len(bad) == 1 and "no longer in data/archive/" in bad[0]
+    # an archived file listed in its SHA-256 record but missing
+    (s.data_dir / "archive" / "m01_3edc0dd" / "barangay_access.csv").unlink()
+    assert _archive_findings(s)["m01_3edc0dd"].status == audit.FAIL
+
+
+@pytest.mark.parametrize(
+    ("taxonomy", "expected"),
+    [
+        ({**COMPARED, "identical": False}, "taxonomy_check False"),
+        ({**COMPARED, "components_compared": 111}, "111 components"),
+        (
+            {**COMPARED, "reference": "data/archive/other/component_inventory.csv"},
+            "not the pre-taxonomy reference",
+        ),
+        (NOT_COMPARED, "the comparison was not made"),  # reference present, `components` ran without it
+    ],
+)
+def test_invalid_or_inconsistent_references_fail(tmp_path, taxonomy, expected):
+    s = _project(tmp_path, archive=True, m01=True, reference=True)
+    _, bad = D.classes_check(s, taxonomy)
+    assert len(bad) == 1 and bad[0].startswith("V-S4") and expected in bad[0]
+
+
+def test_modified_archived_file_fails(tmp_path):
+    s = _project(tmp_path, archive=True, m01=True, reference=True)
+    (s.data_dir / "archive" / "m01_3edc0dd" / "barangay_access.csv").write_text("a\n2\n", encoding="utf-8")
+    assert _archive_findings(s)["m01_3edc0dd"].status == audit.FAIL
+
+
+def _export_with_archive_dir(tmp_path, monkeypatch, arch: Path, taxonomy: dict) -> int:
+    """Export the real outputs to tmp_path/bundle as if data/archive/ were `arch` and taxonomy_check.json
+    were `taxonomy`. The audit block is the one the real audit gives without archives."""
+    real_load = D.load
+
+    def load(s):
+        src = real_load(s)
+        src.taxonomy = taxonomy
+        return src
+
+    monkeypatch.setattr(D, "load", load)
+    monkeypatch.setattr(D, "archive_dir", lambda s: arch)
+    finding = audit.Finding(
+        "archive", "m01_archive_present", audit.WARN, f"{audit.NOT_PERFORMED}: data/archive/ absent"
+    )
+    monkeypatch.setattr(D, "run_audit", lambda s, c, skip: D.audit_from_findings([finding], "t"))
+    return D.export(CFG, DEFAULT_CONFIG, root=tmp_path / "bundle")
+
+
+@pytest.mark.skipif(not HAVE_DATA, reason="analytical outputs not present")
+def test_export_without_archives_records_not_performed(tmp_path, monkeypatch):
+    assert _export_with_archive_dir(tmp_path, monkeypatch, tmp_path / "no_archive", NOT_COMPARED) == 0
+    v1 = tmp_path / "bundle" / "v1"
+    man = json.loads((v1 / "manifest.json").read_text(encoding="utf-8"))
+    sv = man["data_quality"]["source_validation"]
+    cc = sv["component_classes_check"]
+    assert cc["status"] == "not_performed" and cc["identical"] is None and cc["components_compared"] is None
+    assert sv["audit"]["outcome"] == "warn" and sv["audit"]["findings"][0]["detail"].startswith(
+        audit.NOT_PERFORMED
+    )
+    codes = [k["code"] for k in man["known_issues"]]
+    assert D.ARCHIVE_ISSUE in codes and "AUDIT-WARN" in codes
+    assert man["contract_version"] == "1.1.0"
+    # the indicators do not depend on the archives: identical to the installed bundle
+    installed = CFG.processed_dir / "dashboard" / "v1"
+    if (installed / "city.json").exists():
+        for name, keys in (
+            ("city.json", ("population", "walk", "walk_internal", "walk_distribution", "drive")),
+            ("barangay_indicators.json", ("barangays",)),
+            ("facilities.geojson", ("features",)),
+            ("cells-001.geojson", ("features",)),
+            ("cells-002.geojson", ("features",)),
+        ):
+            new = json.loads((v1 / name).read_text(encoding="utf-8"))
+            old = json.loads((installed / name).read_text(encoding="utf-8"))
+            assert all(new[k] == old[k] for k in keys), name
+
+
+@pytest.mark.skipif(not HAVE_DATA, reason="analytical outputs not present")
+def test_export_with_incomplete_archives_is_blocked(tmp_path, monkeypatch, capsys):
+    arch = tmp_path / "incomplete_archive"
+    (arch / "m01_3edc0dd").mkdir(parents=True)  # the tree exists; the taxonomy reference does not
+    assert _export_with_archive_dir(tmp_path, monkeypatch, arch, NOT_COMPARED) == 1
+    out = capsys.readouterr().out
+    assert "V-S4" in out and "incomplete archive" in out
+    assert not (tmp_path / "bundle").exists()  # nothing written

@@ -118,11 +118,16 @@ function known(b: LoadedBundle) {
 
 function validation(b: LoadedBundle) {
   const v = b.manifest.data_quality.source_validation;
-  const items: [string, boolean][] = [
+  const cc = v.component_classes_check;
+  // null = the check was not performed (no reference material): shown as such, never as passed or failed
+  const items: [string, boolean | null][] = [
     ["A1 reproduces the baseline", v.a1_reproduces_baseline],
     ["Baseline outputs unchanged", v.baseline_outputs_unchanged],
     ["Baseline hashes match the files on disk", v.baseline_hashes_match_disk],
-    [`Component classes identical (${v.component_classes_check.components_compared} compared)`, v.component_classes_check.identical],
+    [
+      cc.status === "not_performed" ? "Component classes identical to the archived reference" : `Component classes identical (${cc.components_compared} compared)`,
+      cc.status === "not_performed" ? null : cc.identical,
+    ],
   ];
   return (
     <Panel id="val" title="Source validation">
@@ -130,12 +135,13 @@ function validation(b: LoadedBundle) {
         {items.map(([l, ok]) => (
           <li key={l} style={{ gridTemplateColumns: "minmax(0,1fr) auto" }}>
             <span>{l}</span>
-            {ok ? <Badge tone="ok">Yes</Badge> : <Badge tone="error">No</Badge>}
+            {ok === null ? <Badge tone="warn">Not performed</Badge> : ok ? <Badge tone="ok">Yes</Badge> : <Badge tone="error">No</Badge>}
           </li>
         ))}
       </ul>
       <p className="small muted" style={{ margin: "var(--space-3) 0 0" }}>
-        Reference: <code style={{ overflowWrap: "anywhere" }}>{v.component_classes_check.reference ?? "none"}</code>
+        Reference: <code style={{ overflowWrap: "anywhere" }}>{cc.reference ?? "none"}</code>
+        {cc.reason ? <> · {cc.reason}</> : null}
       </p>
     </Panel>
   );

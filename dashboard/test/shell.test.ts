@@ -149,6 +149,19 @@ describe("bundle status on Data quality (read from the bundle, never hard-coded)
     expect(html).toContain("Not run");
     expect(html).not.toContain("Passed");
   });
+  it("shows a component-class comparison that was not performed as such, never as passed or failed", async () => {
+    const notPerformed = { status: "not_performed", reference: null, components_compared: null, identical: null, reason: "data/archive/ absent" };
+    const s = await ready((d) => {
+      for (const doc of ALL_DOCS(d)) doc["data_quality"].source_validation.component_classes_check = notPerformed;
+    });
+    const html = render("quality", s);
+    expect(html).toMatch(/Component classes identical to the archived reference<\/span><span class="badge badge--warn"[^>]*>.*?Not performed/);
+    expect(html).toContain("data/archive/ absent");
+    expect(html).not.toContain("null compared");
+    // performed comparisons keep their Yes / No
+    const ok = await ready();
+    expect(render("quality", ok)).toMatch(/Component classes identical \(3 compared\)<\/span><span class="badge badge--ok"/);
+  });
   it("distinguishes unknown Git status from a dirty tree", async () => {
     const s = await ready((d) => (d.manifest["code"] = { git_commit: null, git_working_tree_clean: null, git_dirty_count: null, git_dirty_paths: [], abot_version: "0.1.0" }));
     const git = s.status === "ready" ? bundleStatusItems(s.bundle).find((i) => i.key === "git") : undefined;
@@ -156,7 +169,7 @@ describe("bundle status on Data quality (read from the bundle, never hard-coded)
   });
   it("tells every page about a newer minor contract version", async () => {
     const s = await ready((d) => {
-      for (const doc of ALL_DOCS(d)) doc["contract_version"] = "1.1.0";
+      for (const doc of ALL_DOCS(d)) doc["contract_version"] = "1.2.0";
     });
     expect(render("overview", s)).toContain("newer version of ABOT");
     expect(s.status === "ready" && bundleStatusItems(s.bundle)[0]!.tone).toBe("warn");

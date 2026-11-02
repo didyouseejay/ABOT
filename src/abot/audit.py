@@ -10,7 +10,8 @@ Sections:
   staleness     stages ran in order, with the current configuration, after the last code change
   consistency   population conservation, census anchoring, denominators, flags, CSV = GeoPackage
   validity      the validity-assessment diagnostics, recomputed from the outputs
-  archive       archived outputs still match their recorded SHA-256
+  archive       archived outputs still match their recorded SHA-256 (WARN "NOT PERFORMED" when the
+                whole data/archive/ tree is absent, as in a fresh clone; strict whenever it exists)
 """
 
 from __future__ import annotations
@@ -34,6 +35,8 @@ from abot.fetch.common import load_manifest, sha256
 log = logging.getLogger(__name__)
 
 PASS, WARN, FAIL, INFO = "PASS", "WARN", "FAIL", "INFO"
+# Prefix of a WARN whose check could not be performed (reference material absent): never a PASS.
+NOT_PERFORMED = "NOT PERFORMED"
 STAGE_LAYERS = {
     "boundaries": ["city", "barangays"],
     "population": [population.CELLS_LAYER, population.PIECES_LAYER],
@@ -773,6 +776,18 @@ class Audit:
     def check_archive(self):
         sec, arch = "archive", self.s.data_dir / "archive"
         m01 = arch / "m01_3edc0dd"
+        if not arch.exists():
+            # No archive tree at all (a fresh clone: archives are local records, not distributed). The
+            # checks are NOT PERFORMED, never passed. With data/archive/ present they stay strict below.
+            self.add(
+                sec,
+                "m01_archive_present",
+                WARN,
+                f"{NOT_PERFORMED}: {arch.relative_to(self.s.root).as_posix()}/ absent, so the Milestone 01 "
+                "archive and the SHA-256 records of archived outputs were not checked",
+                "historical archives are local records, not distributed: restore data/archive/ to check them",
+            )
+            return
         self.add(
             sec,
             "m01_archive_present",

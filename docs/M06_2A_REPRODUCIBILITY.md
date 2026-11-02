@@ -16,9 +16,14 @@
   input, checked by a new rule V-S5 (contract 1.0.1).
 - **Second latent defect fixed in the same change.** A snapshot with no link candidate would have
   crashed the export.
-- **Two more fresh-clone blockers found.** They are documented, not changed, because both are
-  integrity checks against the author's local archives (§3.3) and changing them needs the author's
-  decision.
+- **Two more fresh-clone blockers found.** Both are integrity checks against the author's local
+  archives (§3.3).
+- **Follow-up (§10): archive-aware validation**, implemented after the author approved §3.3.
+  - Without any `data/archive/`, the archive-dependent checks are reported as **NOT PERFORMED**,
+    never as passed, and the export can proceed (contract 1.1.0).
+  - Whenever `data/archive/` exists, they stay as strict as before.
+  - A fresh clone can now *produce a bundle*. That does **not** mean it reproduces the historical
+    published results (§10.4).
 
 ---
 
@@ -113,13 +118,15 @@ methodological requirement.
 |---|---|---|
 | Corridor table required (V-S1) | Blocks | **Resolved** (§5) |
 | Snapshot without link candidates (`EmptyDataError`) | Would crash | **Resolved** |
-| V-S4: `taxonomy_check.json` must report `identical: true`, 112 components | Blocks: without `data/archive/review_m04_pre_access_taxonomy/`, `components` writes "reference absent: not compared" (observed) | **Still blocks** (§3.3) |
-| Audit gate: `m01_archive_present` is **FAIL** without `data/archive/m01_3edc0dd/` | Blocks | **Still blocks** (§3.3) |
+| V-S4: `taxonomy_check.json` must report `identical: true`, 112 components | Blocks: without `data/archive/review_m04_pre_access_taxonomy/`, `components` writes "reference absent: not compared" (observed) | Still blocked after the snapshot fix. **Resolved in the follow-up** (§10) when `data/archive/` is entirely absent; still blocks when it exists |
+| Audit gate: `m01_archive_present` is **FAIL** without `data/archive/m01_3edc0dd/` | Blocks | Still blocked after the snapshot fix. **Resolved in the follow-up** (§10) when `data/archive/` is entirely absent; still FAIL when it exists |
 
-**Answer: not yet.** The snapshot is no longer required. A fresh clone is still blocked by two
-archive-dependent integrity checks.
+**Answer, after the snapshot fix: not yet.** The snapshot was no longer required, but two
+archive-dependent checks still blocked a fresh clone. **After the follow-up (§10): yes, a fresh
+clone can export a bundle.** The archive checks are recorded as NOT PERFORMED. This is a statement
+about the export workflow, not about reproducing published results (§10.4).
 
-### 3.3 The archive-dependent checks (documented, not changed)
+### 3.3 The archive-dependent checks (as found; implemented in §10)
 
 Both checks are deliberate regression guards for the author's machine:
 - V-S4 proves the M04 access-taxonomy refactor left all 112 component classes unchanged.
@@ -131,8 +138,8 @@ distributed (`data/` is git-ignored). Two problems follow:
 - the only way round them is `--skip-audit`, which is recorded as `not_run`, and V-S4 cannot be
   skipped at all.
 
-Changing them weakens a safeguard the author relies on, so it is a policy decision for the author.
-The smallest safe correction (proposed, **not implemented**):
+Changing them weakens a safeguard the author relies on, so it was a policy decision for the author.
+The author approved it, and §10 records what was implemented. The proposal was:
 - **V-S4:** accept `taxonomy_check.reference: null` (the archive was absent and the comparison not
   made) as a *visible* state:
   - record `component_classes_check.identical: null`;
@@ -276,7 +283,7 @@ which this milestone excludes.
 | Live Overpass network, barriers, facilities | build | Re-queryable but not pinned. The original snapshot is ODbL; redistribution requires ODbL terms |
 | Targeted gap snapshot | **optional** gap evidence | As above; now optional |
 | Reviewer decisions (`review_decisions_log.csv`, M03 review files) | `DQ-DUP` and review status | Small, author-made, not OSM data; could be committed (decision for M06.2C) |
-| `data/archive/m01_3edc0dd/`, `data/archive/review_m04_pre_access_taxonomy/` | audit gate, V-S4 | Derived from OSM (ODbL); not distributed. The checks need the change proposed in §3.3 |
+| `data/archive/m01_3edc0dd/`, `data/archive/review_m04_pre_access_taxonomy/` | audit archive checks, V-S4 | Derived from OSM (ODbL); not distributed. Since §10: optional for a fresh clone (checks NOT PERFORMED); required and strict whenever `data/archive/` exists |
 
 ## 9. Recommended next steps (M06.2B: GitHub Actions CI)
 
@@ -299,12 +306,128 @@ CI should verify what runs **without data**, and not pretend to reproduce the pi
    `ruff format --check`, or leave format out of CI until then. Do not make CI red on the 8 known
    files.
 5. **Not in CI:**
-   - `abot fetch`, `build`, `components`, `fetch-gaps` and `export-dashboard`: network, 550 MB and
-     archives;
+   - `abot fetch`, `build`, `components`, `fetch-gaps` and `export-dashboard`: they need network
+     access and about 550 MB of input data. Archives are no longer required since §10;
    - `uv lock --check`, which is covered by `uv sync --locked`.
 6. **Badge:** add the CI status badge to the README.
 7. **Small follow-up:** type `GapEvidence.classification_reason` (and the other path fields) as
-   `string | null` in `dashboard/src/contract/types.ts`, so the types match contract 1.0.1.
-8. **Before M06.2B, decide the §3.3 proposal**, the archive-dependent V-S4 and audit checks. It
-   does not block CI, but it decides whether a later "fresh-clone export" job (M06.2C, with a small
-   committed fixture or a release asset under the ODbL) is possible at all.
+   `string | null` in `dashboard/src/contract/types.ts`, so the types match contract 1.0.1 and later.
+8. **The §3.3 decision has been taken (§10).** A later "fresh-clone export" job (M06.2C) is now
+   possible in principle. It still needs input data, either downloaded or from a small committed
+   fixture or a release asset under the ODbL, so it is not part of M06.2B.
+
+## 10. Follow-up: archive-aware validation (implemented)
+
+The author approved §3.3: an entirely absent `data/archive/` must not prevent a fresh clone from
+exporting, and archive-dependent validation must stay strict whenever archives are present.
+
+### 10.1 Behaviour
+
+| `data/archive/` state | Audit `m01_archive_present` | Audit SHA-256 checks of archived outputs | V-S4 component-class comparison | Export |
+|---|---|---|---|---|
+| **Absent entirely** (fresh clone) | **WARN**, detail starts `NOT PERFORMED: data/archive/ absent …` | not performed (no records to read); covered by the same WARN | `component_classes_check.status: not_performed`, `identical: null`, `reason` set | **allowed**; known issues `AUDIT-WARN` + `ARCHIVE-CHECKS-NOT-PERFORMED` |
+| Present and complete, references valid | PASS | PASS per archive | `performed`, `identical: true` | allowed (as before) |
+| Present, M01 archive missing | **FAIL** | — | — | **blocked** (audit gate) |
+| Present, taxonomy reference missing, or `components` ran without it | — | — | **V-S4 problem** ("incomplete archive" / "comparison was not made: re-run `abot components`") | **blocked** |
+| Present, an archived file changed or missing | — | **FAIL** | — | **blocked** |
+| Present, comparison failed (`identical: false`, not 112 components, another reference, or the recorded reference no longer exists) | — | — | **V-S4 problem** | **blocked** |
+
+Distinction kept wherever the results are consumed:
+- **Audit console and report:** NOT PERFORMED is a WARN with that prefix (`audit.NOT_PERFORMED`),
+  never a PASS. The PASS/WARN/FAIL/INFO status set is unchanged, so no audit consumer needed a new
+  status.
+- **Bundle:** the audit block carries the WARN finding, and `AUDIT-WARN` is written.
+  `component_classes_check` has an explicit `status` and `reason`, and the
+  `ARCHIVE-CHECKS-NOT-PERFORMED` known issue is written if and only if the status is
+  `not_performed`. The exporter's own validation refuses any other combination, or `not_performed`
+  while `data/archive/` exists.
+- **Dashboard (Data quality page):**
+  - the comparison shows a "Not performed" warning badge, never "Yes" or "No";
+  - the reason is shown next to the reference;
+  - the known issue and the audit finding are listed;
+  - performed comparisons keep their Yes/No.
+- **Contract:** 1.1.0 (minor; §14 explains why not major). The dashboard supports 1.1.0 and still
+  reads 1.0.x bundles.
+
+### 10.2 Changes
+
+| File | Change |
+|---|---|
+| `src/abot/audit.py` | `NOT_PERFORMED`; `check_archive` returns a single NOT PERFORMED WARN when `data/archive/` is absent; otherwise unchanged (strict) |
+| `src/abot/dashboard_data.py` | `archive_dir()`, `classes_check()` (V-S4, returns the recorded block and the problems), `ARCHIVE-CHECKS-NOT-PERFORMED` known issue, validation of the not-performed state, `CONTRACT_VERSION` 1.1.0 |
+| `src/abot/cli.py` | Help text: contract 1.1.0 |
+| `dashboard/src/contract/types.ts`, `version.ts`, `pages/QualityPage.tsx` | Nullable comparison fields with `status`/`reason`; supported contract 1.1.0; three-state badge |
+| `tests/test_m06.py` | 10 new Python tests (§10.3) |
+| `dashboard/test/*.test.ts` | 1 new render test. The "newer minor version" examples move from 1.1.0 to 1.2.0, because 1.1.0 is now supported, and 1.1.0 is asserted compatible |
+| `docs/DASHBOARD_DATA_CONTRACT.md` | 1.1.0: `component_classes_check` states table, V-S4, known issue, revision record |
+
+**Not changed:**
+- the analytical methodology and indicator code (`components.py`, `accessibility.py` and the
+  rest);
+- `data/archive/`, which was read but never written;
+- the installed bundle (contract 1.0.0, commit `3073524`, still current).
+
+### 10.3 Tests and verification
+
+**New Python tests** (`tests/test_m06.py`, all passing):
+
+| Case required | Test |
+|---|---|
+| Completely absent archive directory | `test_absent_archive_tree_is_not_performed_never_passed`: one audit finding, WARN `NOT PERFORMED`; V-S4 `not_performed` with null fields and no problem; nothing created |
+| Complete archive with valid references | `test_complete_archive_with_valid_references_passes_strictly`: `m01_archive_present` and the archive hash both PASS; V-S4 `performed`, no problem |
+| Archive present but missing required references | `test_archive_present_but_missing_references_fails`: M01 missing → FAIL; taxonomy reference missing → V-S4 "incomplete archive"; a recorded reference that has disappeared → V-S4; an archived file that has disappeared → FAIL |
+| Invalid or inconsistent archived references | `test_invalid_or_inconsistent_references_fail` (4 cases: `identical: false`; 111 components; another reference; reference present but not compared) and `test_modified_archived_file_fails` |
+| Dashboard export with no archives | `test_export_without_archives_records_not_performed`: real outputs exported to a temporary folder. The archive directory is redirected to a nonexistent path, and the audit block is the one the audit gives without archives. Checked: exit 0, `not_performed`, both known issues, contract 1.1.0, and `city` (population, walk, walk_internal, walk_distribution, drive), `barangay_indicators`, `facilities` and both cell chunks **equal to the installed bundle** |
+| Dashboard export with incomplete archives | `test_export_with_incomplete_archives_is_blocked`: an archive directory without the taxonomy reference gives exit 1, a V-S4 "incomplete archive" message, and nothing written |
+
+**Isolated workflow run** (the scratch copy of §7.2: code updated with the three changed Python
+files, `data/archive/` removed; the real in-process audit):
+
+| Step | Result |
+|---|---|
+| `abot components` | exit 0; `taxonomy_check.json`: `reference: null`, "not compared" |
+| `abot audit` | `WARN archive m01_archive_present: NOT PERFORMED: data/archive/ absent …`; PASS 49 · WARN 11 · FAIL 0. The other extra WARNs are the copy-timestamp artifacts of §7.2 |
+| `abot export-dashboard` | **exit 0**, all checks passed. Bundle: contract 1.1.0; `component_classes_check.status: not_performed`; known issues `AUDIT-WARN`, `ARCHIVE-CHECKS-NOT-PERFORMED`. `city`, `barangay_indicators`, `facilities` and both cell chunks equal the installed bundle |
+| Empty `data/archive/` created, `abot export-dashboard` | **exit 1**: `V-S4: data/archive/ exists but the component classes were not compared: … is missing from the archive (incomplete archive …)`; previous bundle unchanged |
+| Same, `abot audit --skip-hashes` | `FAIL archive m01_archive_present`; exit 1 |
+
+**Repository checks:**
+- pytest: **250 passed** (240 + 10).
+- ruff check: passed. ruff format --check: the same 8 pre-existing files.
+- Vitest: **82 passed** (81 + 1); typecheck clean.
+- Production build: passed, 9 bundle files verified.
+- On the real data, read-only: the comparison is `performed`, V-S4 passes, and `m01_archive_present`
+  is PASS. The installed bundle is still current.
+
+### 10.4 Which validations run in a fresh clone, and what that does and does not show
+
+**Performed in a fresh clone** (after `fetch`, `build`, `report`, `review`, `validate` and
+`components`):
+- every audit section except the archive section: config, inputs and their SHA-256 against the
+  freshly written manifest, outputs, staleness, consistency, validity;
+- every exporter check except the archive comparison:
+  - V-S1 to V-S3 and V-S5;
+  - the population, identity, join, distribution, geometry, quality and audit checks of contract
+    §10.2;
+  - the SHA-256 manifest;
+  - the build-time and browser verification.
+
+**Not performed in a fresh clone** (stated in the bundle):
+- the Milestone 01 archive presence check;
+- the SHA-256 checks of archived outputs;
+- the V-S4 comparison of component classes with the pre-taxonomy reference.
+
+**What a fresh-clone bundle shows:** the current code, run on the data available at that time,
+produced internally consistent outputs that passed every check that could be performed.
+
+**What it does not show:**
+- **The published results are not reproduced.** The OpenStreetMap data is queried live and not
+  pinned to a date, the original snapshot is not distributed, and the manual review decisions are
+  absent. The numbers can differ from the published bundle.
+- **It is not checked against earlier milestones.** The checks that would compare it with history
+  (M01 record, pre-taxonomy component classes) are exactly the ones not performed.
+- **It is not validated against official registries.** That is unchanged: no category is
+  verified.
+
+The dashboard's Data quality page lists `ARCHIVE-CHECKS-NOT-PERFORMED`, so a reader of such a bundle
+is told this.

@@ -1,6 +1,6 @@
 /** The contract this frontend implements (docs/DASHBOARD_DATA_CONTRACT.md §9.2 condition 4, §14). */
 export const CONTRACT_ID = "abot-dashboard";
-export const SUPPORTED_VERSION = "1.0.0";
+export const SUPPORTED_VERSION = "1.1.0";
 
 export interface Version {
   major: number;

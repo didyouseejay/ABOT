@@ -59,7 +59,7 @@ describe("contract compatibility (§9.2 condition 4)", () => {
     expect(fatalText(await load((d) => (d.manifest["contract"] = "other-dashboard")))).toMatch(/not an abot-dashboard bundle/);
   });
   it("warns about a newer minor version instead of assuming compatibility", async () => {
-    const b = ready(await load((d) => allEnvelopes(d, (e) => (e["contract_version"] = "1.1.0"))));
+    const b = ready(await load((d) => allEnvelopes(d, (e) => (e["contract_version"] = "1.2.0"))));
     expect(b.compatibility.status).toBe("newer_minor");
     expect(b.issues.some((i) => i.level === "warning" && /newer than the supported/.test(i.message))).toBe(true);
   });

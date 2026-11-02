@@ -1,4 +1,4 @@
-"""`abot export-dashboard`: the static dashboard data bundle (contract `abot-dashboard v1.0.1`).
+"""`abot export-dashboard`: the static dashboard data bundle (contract `abot-dashboard v1.1.0`).
 
 docs/DASHBOARD_DATA_CONTRACT.md is the authority; section and rule numbers below refer to it. The
 exporter is read-only over the analytical outputs: it selects, renames, reshapes, reprojects and rounds
@@ -33,7 +33,7 @@ from abot.config import Settings
 from abot.fetch.common import sha256
 from abot.fetch.targeted import LAT_RANGE, LON_RANGE
 
-CONTRACT, CONTRACT_VERSION = "abot-dashboard", "1.0.1"
+CONTRACT, CONTRACT_VERSION = "abot-dashboard", "1.1.0"
 BUNDLE = "v1"
 MAX_FILE_BYTES = 4_000_000  # §5.1: uncompressed bytes as written
 BIN_WIDTH_MIN, CLOSED_MAX_MIN = 1, 60  # §7.2 walk_distribution (Q5)
@@ -335,6 +335,51 @@ def load(s: Settings) -> Sources:
     )
 
 
+ARCHIVE_ISSUE = "ARCHIVE-CHECKS-NOT-PERFORMED"
+
+
+def archive_dir(s: Settings) -> Path:
+    """data/archive/: local records of earlier milestones, not distributed with the code."""
+    return s.data_dir / "archive"
+
+
+def classes_check(s: Settings, t: dict) -> tuple[dict, list[str]]:
+    """V-S4: the component classes equal the archived pre-taxonomy reference (taxonomy_check.json).
+
+    Returns the `component_classes_check` block and the problems. Strict whenever data/archive/ exists:
+    a missing, moved or failed comparison is a problem. Only when the whole archive tree is absent (a
+    fresh clone: archives are local records, not distributed) is the comparison NOT PERFORMED; it is
+    then recorded as such, with `identical: null`, never as passed."""
+    arch = archive_dir(s)
+    ref = arch / C.TAXONOMY_REFERENCE / "review_m04" / "component_inventory.csv"
+    rerun = "re-run `abot components`"
+    recorded = t.get("reference")
+    if recorded is None:
+        block = {"status": "not_performed", "reference": None, "components_compared": None, "identical": None,
+                 "reason": f"{rel(s, arch)}/ absent: the component classes were not compared with the archived "
+                           "pre-taxonomy reference"}  # fmt: skip
+        if not arch.exists():
+            return block, []
+        why = (
+            f"{rel(s, ref)} is missing from the archive (incomplete archive: restore it, then {rerun})"
+            if not ref.exists()
+            else f"{rel(s, ref)} exists, but the comparison was not made: {rerun}"
+        )
+        return block, [f"V-S4: data/archive/ exists but the component classes were not compared: {why}"]
+    block = {"status": "performed", "reference": recorded, "components_compared": t.get("components_compared"),
+             "identical": t.get("identical"), "reason": None}  # fmt: skip
+    bad = []
+    if recorded != rel(s, ref):
+        bad.append(f"V-S4: compared with {recorded}, not the pre-taxonomy reference {rel(s, ref)}: {rerun}")
+    elif arch.exists() and not ref.exists():
+        bad.append(
+            f"V-S4: the reference {recorded} was compared but is no longer in data/archive/: restore it"
+        )
+    if not (t.get("identical") is True and t.get("components_compared") == 112):
+        bad.append(f"V-S4: taxonomy_check {t.get('identical')}, {t.get('components_compared')} components")
+    return block, bad
+
+
 def snapshot_checks(s: Settings, src: Sources) -> list[str]:
     """V-S5: the targeted-snapshot evidence is used as `abot components` declared it, or not at all."""
     st, m04 = src.snapshot_status, s.processed_dir / "review" / "m04"
@@ -376,10 +421,7 @@ def source_checks(s: Settings, src: Sources) -> list[str]:
     ):
         bad.append(f"V-S3: config_sha256 differs (config {s.config_sha256[:12]}, stages {stages}, run_info "
                    f"{str(src.run_info.get('config_sha256'))[:12]})")  # fmt: skip
-    t = src.taxonomy
-    if not (t.get("identical") is True and t.get("components_compared") == 112):
-        bad.append(f"V-S4: taxonomy_check {t.get('identical')}, {t.get('components_compared')} components")
-    return bad + snapshot_checks(s, src)
+    return bad + classes_check(s, src.taxonomy)[1] + snapshot_checks(s, src)
 
 
 # --- audit (§6.1.1) -------------------------------------------------------------------------------
@@ -1104,6 +1146,11 @@ def build_manifest(ctx: Ctx, files: dict[str, bytes], layout: dict, source_files
     if audit_block["status"] == "not_run":
         issues.append({"code": "AUDIT-NOT-RUN", "text": "abot audit was not run for this bundle (--skip-audit).",
                        "affects": ["bundle"]})  # fmt: skip
+    if ctx.source_validation["component_classes_check"]["status"] == "not_performed":
+        issues.append({"code": ARCHIVE_ISSUE, "text": "data/archive/ was absent: the comparison of the component "
+                       "classes with the archived pre-taxonomy reference (V-S4) and the audit's archive checks were "
+                       "not performed. They test consistency with earlier milestones, not the indicators; this "
+                       "bundle does not show that historical results were reproduced.", "affects": ["bundle"]})  # fmt: skip
     if code["git_working_tree_clean"] is False:
         issues.append({"code": "GIT-DIRTY", "text": f"Built from a working tree with {code['git_dirty_count']} "
                        "uncommitted change(s); the commit alone does not identify the code.", "affects": ["code"]})  # fmt: skip
@@ -1561,6 +1608,13 @@ def validate(s: Settings, src: Sources, d: Path, ctx: Ctx, skip_audit: bool) -> 
         ab["status"] == "not_run"
     ):
         bad.append("V-A1: audit known_issues")
+    cc = man["data_quality"]["source_validation"]["component_classes_check"]
+    if (ARCHIVE_ISSUE in codes_k) != (cc["status"] == "not_performed") or (
+        cc["status"] == "not_performed" and (cc["identical"] is not None or archive_dir(s).exists())
+    ):
+        bad.append(
+            "V-S4: component_classes_check not_performed state, known issue and data/archive/ disagree"
+        )
     for o in (city, brgy, ind, fac, net, prov, man, *chunks):
         if o["data_quality"]["source_validation"] != man["data_quality"]["source_validation"]:
             bad.append(f"§6.1: source_validation differs in {o['dataset']}")
@@ -1669,17 +1723,12 @@ def export(s: Settings, config_path: Path, skip_audit: bool = False, root: Path 
     print(
         f"audit: {block['status']}" + (f" / {block['outcome']} {block['counts']}" if block["counts"] else "")
     )
-    t = src.taxonomy
     sv = {
         "audit": block,
         "a1_reproduces_baseline": bool(src.run_info["a1_reproduces_baseline"]),
         "baseline_outputs_unchanged": bool(src.run_info["baseline_outputs_unchanged"]),
         "baseline_hashes_match_disk": True,  # V-S2 passed above
-        "component_classes_check": {
-            "reference": t.get("reference"),
-            "components_compared": t.get("components_compared"),
-            "identical": t.get("identical"),
-        },  # fmt: skip
+        "component_classes_check": classes_check(s, src.taxonomy)[0],  # V-S4 passed above
     }
     cat, bsrc = catalog(s)
     ctx = Ctx(s, src, now_utc(), sv, cat, bsrc)

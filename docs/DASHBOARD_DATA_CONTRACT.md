@@ -1,9 +1,9 @@
-# ABOT dashboard data contract — `abot-dashboard v1.0.1`
+# ABOT dashboard data contract — `abot-dashboard v1.1.0`
 
 | | |
 |---|---|
-| **Contract** | `abot-dashboard`, version **1.0.1** (patch of 1.0.0; see §14 Revisions) |
-| **Date** | 2026-10-31; final M05.0 review 2026-11-01; 1.0.1 on 2026-11-02 (M06.2A) |
+| **Contract** | `abot-dashboard`, version **1.1.0** (see §14 Revisions) |
+| **Date** | 2026-10-31; final M05.0 review 2026-11-01; 1.0.1 and 1.1.0 on 2026-11-02 (M06.2A) |
 | **Status** | Approved; implemented by `abot export-dashboard` (M05.1). Frontend M05.2 in progress |
 | **Bundle location** | `data/processed/dashboard/v1/` (git-ignored, like all of `data/`) |
 | **Producer (future)** | `abot export-dashboard` (M05.1), Python, read-only over the analytical outputs |
@@ -272,10 +272,26 @@ source_validation = {
   "a1_reproduces_baseline":      boolean,   # recorded by `abot components` in run_info.json at created_utc (not re-verified)
   "baseline_outputs_unchanged":  boolean,   # recorded in run_info.json (not re-verified)
   "baseline_hashes_match_disk":  boolean,   # re-verified by the exporter (V-S2); always true in a written bundle
-  "component_classes_check":     {reference: string | null, components_compared: integer, identical: boolean}
-                                             # review/m04/taxonomy_check.json; V-S4 requires identical = true
+  "component_classes_check":     {status: enum<performed|not_performed>,          # 1.1.0
+                                  reference: string | null, components_compared: integer | null,
+                                  identical: boolean | null, reason: string | null}  # 1.1.0: nullable, reason
+                                             # review/m04/taxonomy_check.json; V-S4
 }
 ```
+
+`component_classes_check` (V-S4) compares the component classes with the archived pre-taxonomy
+reference `data/archive/review_m04_pre_access_taxonomy/review_m04/component_inventory.csv`:
+
+| State at export | `status` | `identical` | Export | Known issue |
+|---|---|---|---|---|
+| Compared, identical, 112 components, with the expected reference | `performed` | `true` | allowed | — |
+| Compared and different, wrong count, or another reference | — | — | **blocked** (V-S4) | — |
+| `data/archive/` exists but the comparison was not made, or its recorded reference is gone | — | — | **blocked** (V-S4) | — |
+| **No `data/archive/` at all** (a fresh clone: archives are local records, not distributed) and not compared | `not_performed` | `null` (`components_compared` null, `reason` set) | allowed | `ARCHIVE-CHECKS-NOT-PERFORMED` |
+
+`not_performed` **MUST NOT** be displayed as passed or as failed (1.x clients before 1.1.0 show it as
+"No": fail-closed, never a false pass). A 1.0.x bundle has no `status` or `reason`; it was always
+performed.
 
 #### 6.1.1 Audit block
 
@@ -389,7 +405,7 @@ physical layout of the cell dataset, and the data needed to detect a stale bundl
 | `walk_distribution` | `{bin_width_min: 1, closed_max_min: 60}` | §7.2 |
 | `indicator_catalog` | `array<{id, levels: array<enum<barangay\|city>>, scenario, mode, group \| null, statistic, unit, numerator, denominator \| null, population_described \| null, role, source_file, source_column, statements: array<code>}>` | §4.1, one entry per concrete id (every `{g}`, `{N}`, `{category}` expanded); `denominator` null for counts |
 | `statements` | `array<{code, applies_to, text}>` | §6.3, every code, with figures filled in; the texts that the `statements` codes of every `data_quality` block and catalogue entry refer to |
-| `known_issues` | `array<{code, text, affects}>` | bundle-wide issues (`AUDIT-WARN`, `AUDIT-NOT-RUN`, `GIT-DIRTY`) |
+| `known_issues` | `array<{code, text, affects}>` | bundle-wide issues (`AUDIT-WARN`, `AUDIT-NOT-RUN`, `GIT-DIRTY`; 1.1.0: `ARCHIVE-CHECKS-NOT-PERFORMED` iff `component_classes_check.status` is `not_performed`) |
 | `crs` | `"EPSG:4326"` | §8 |
 
 A commit SHA alone **MUST NOT** be presented as proof that the outputs match the repository: the UI
@@ -647,7 +663,7 @@ population transition (`descriptive`). All sources are in `review/m04/` unless s
 
 **Validation:** 112 components incl. `main`; class counts match `component_inventory`; the 9 fragment
 geometries' `fragment` ids exist in `components` and their source `gap_to_main_m` equals the inventory
-value (verified at review for all 9); `component_classes_check.identical` is true; every
+value (verified at review for all 9); `component_classes_check.identical` is true (or the check is `not_performed` without `data/archive/`, V-S4); every
 `gap_evidence.applied` and every corridor `applied` is false.
 
 In the three access tables (`access_classification`, `access_impact`, `access_impact_by_group`) the
@@ -808,7 +824,7 @@ the ones stated; "equal" without a tolerance means exactly equal after JSON roun
 | V-S1 | Every source file of §7.1.1 exists; the data-loading code opens no other path and none listed in R13. |
 | V-S2 | `run_info.baseline_sha256` equals the SHA-256 of each listed baseline file on disk (6 files at discovery, all matching at review). |
 | V-S3 | `config_sha256` equal across the current config, `run_meta.json` (all stages) and `run_info.json`. |
-| V-S4 | `review/m04/taxonomy_check.json` reports `identical: true` and `components_compared: 112`. |
+| V-S4 | `review/m04/taxonomy_check.json` reports `identical: true` and `components_compared: 112` against the expected reference, which still exists when `data/archive/` exists. (1.1.0) Only when the whole `data/archive/` tree is absent may the comparison be missing: then `component_classes_check` is `not_performed` and `ARCHIVE-CHECKS-NOT-PERFORMED` is written. Any other missing comparison blocks the export. |
 | V-S5 | (1.0.1) The targeted gap snapshot is used exactly as `review/m04/snapshot_status.json` declares: `obtained` is a boolean; no corridor table is present when it is false; the corridor table is non-empty unless the status records 0 link candidates; `gap_investigation.snapshot_obtained` equals `obtained` on every row; the latest `osm_targeted/` entry of `data/raw/manifest.json` is the snapshot that was used (`response_sha256`), or there is none when `obtained` is false. Any mismatch blocks the export with "re-run `abot components`". |
 | V-P1 | Population: Σ `cells_a3.pop` = Σ `access_cells.pop` = Σ `barangay_access_a3.pop_total` = Σ `barangay_access.pop_total` = `run_info.population_total` (±0.5). |
 | V-P2 | Per barangay: Σ four A3 category pops = `pop_total` (±0.5); A3 and A1 `pop_total` equal (±0.05). |
@@ -903,6 +919,18 @@ is role-level (§7.6, reproduces the inventory for all 10 groups); `n_{group}` c
 - The number of cell chunks follows from the data size (§7.5.1) and is not a version change.
 
 **Revisions**
+- **1.1.0** (2026-11-02, M06.2A follow-up; minor).
+  - Archive-aware validation: a fresh clone without `data/archive/` can export.
+  - `component_classes_check` gains `status` and `reason`, and its `identical` and
+    `components_compared` are `null` when `not_performed`.
+  - New known issue `ARCHIVE-CHECKS-NOT-PERFORMED`.
+  - The audit reports `m01_archive_present` as WARN "NOT PERFORMED: …" when `data/archive/` is
+    absent (a WARN finding, so `AUDIT-WARN` too).
+  - Whenever `data/archive/` exists, every archive check is as strict as before.
+  - Why minor, not major: only bundles that 1.0.x could not produce at all (no archives) use the
+    new nulls. A 1.0 client shows them as "No" with a newer-version notice: fail-closed, never a
+    false pass.
+  - The dashboard supports 1.1.0 and still reads 1.0.x.
 - **1.0.1** (2026-11-02, Milestone 06.2A; patch).
   - The targeted gap snapshot (`abot fetch-gaps --allow-download`) becomes optional, declared
     evidence: §7.1.1 reads `snapshot_status.json` and the corridor table only when a snapshot was

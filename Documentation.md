@@ -11,9 +11,11 @@ at the end**, newest first.
 - Licence: source code MIT ([LICENSE](LICENSE), since Milestone 06.1); data keeps its own licences
   ([docs/ATTRIBUTION.md](docs/ATTRIBUTION.md))
 - Study area: Iloilo City, Iloilo, Western Visayas (Region VI), Philippines
-- Current state: **Milestone 06.2A, uncommitted** (2026-11-02): the targeted gap snapshot is now
-  optional, declared evidence for `abot export-dashboard` (check V-S5, contract `abot-dashboard`
-  1.0.1); fresh-clone workflow audit in
+- Current state: **Milestone 06.2A follow-up, uncommitted** (2026-11-02): archive-aware validation.
+  Without any `data/archive/` the archive-dependent checks are NOT PERFORMED, never passed, and a
+  fresh clone can export; they stay strict whenever archives exist (contract `abot-dashboard`
+  1.1.0). Before that, **Milestone 06.2A** (commit `8ff8aea`): the targeted gap snapshot became
+  optional, declared evidence (check V-S5, contract 1.0.1); fresh-clone workflow audit in
   [docs/M06_2A_REPRODUCIBILITY.md](docs/M06_2A_REPRODUCIBILITY.md). No analytical result changed.
   Before that, **Milestone 06.1** (commit `3073524`): documentation, licensing and
   portfolio presentation (README rewrite, [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), MIT
@@ -218,7 +220,7 @@ You can run single build stages with `abot build --only population osm`.
 | [tests/test_m04.py](tests/test_m04.py) | Offline regression tests for Milestone 04 |
 | [src/abot/dashboard_data.py](src/abot/dashboard_data.py) | Dashboard data bundle per [docs/DASHBOARD_DATA_CONTRACT.md](docs/DASHBOARD_DATA_CONTRACT.md): read-only over the outputs, audit gate, deterministic cell chunks, validation of the written files, temporary-directory install, `--check` staleness report (Milestone 05.1) |
 | [tests/test_m05.py](tests/test_m05.py) | Regression tests for Milestone 05.1 and its M05.2 S0 hardening (28 offline unit tests; 2 end-to-end tests that read the real outputs read-only, write only to a temporary directory and are skipped without data) |
-| [tests/test_m06.py](tests/test_m06.py) | Regression tests for Milestone 06.2A: the optional, declared targeted snapshot in the exporter (V-S5): 9 offline unit tests and 1 end-to-end test on the real outputs (temporary directory only; skipped without data) |
+| [tests/test_m06.py](tests/test_m06.py) | Regression tests for Milestone 06.2A: the optional, declared targeted snapshot in the exporter (V-S5) and the archive-aware validation of the follow-up (audit NOT PERFORMED, V-S4 `not_performed`, strict with archives): 17 offline unit tests and 3 end-to-end tests on the real outputs (temporary directory only; skipped without data) |
 | [dashboard/](dashboard/) | Static frontend (Milestone 05.2): React 19 + Vite 8 + TypeScript 7 (strict). `vite/bundlePlugin.ts` serves the bundle in development (read per request, never watched) and copies it, hash-checked, into `dist/data/v1/` at build; `src/contract/` types and version check; `src/data/` loader, validation, SHA-256, React context; `src/model/` catalogue, scenario names, formatting, distribution view, audit/Git states; `test/` Vitest suite with a hand-made fixture bundle. S3: `src/routes.ts` (section registry), `src/model/shell.ts` (provenance items). S4–S7: `src/components/` (top bar, provenance colophon, caveat notes, shared UI, interface states), `src/pages/` (the seven pages), `src/model/{view,values,labels,ramps}.ts`, `src/map/leaflet.ts`, `src/styles/{tokens,app}.css` |
 
 ### Outputs (`data/processed/`)
@@ -557,7 +559,7 @@ evacuation and transport are descriptive-only categories (see Section 8).
 | `abot audit` (3 km baseline) | M02B: PASS 50, WARN 3, FAIL 0, INFO 11. M03 (with the experiment-run checks): PASS 54, WARN 4 (pending reviews, Guimaras facilities, stale `e7_buffer_3km`), FAIL 0, INFO 11. M04: PASS 55 (new archive `hist_e7_buffer_3km_m02` verified), WARN 4, FAIL 0, INFO 11. M04 follow-up: PASS 57 (A3 layer current; review restore point verified), WARN 3 (`e7_buffer_3km` cleared; 7 duplicates still pending), FAIL 0, INFO 11 |
 | Determinism (M04 + follow-up) | `abot components` under `PYTHONHASHSEED` 0 and 12345: all 17 evidence files and the A3 CSVs byte-identical (A3 GeoPackage identical in content); A1 reproduces the saved baseline, and baseline file hashes are unchanged on every run |
 
-### Unit tests (240 Python, all passing; 81 Vitest tests in `dashboard/test/`, all passing; 10 Milestone 06.2A tests in `tests/test_m06.py`, 1 of which reads the real outputs; the 13 Milestone 01 tests are listed here, 40 Milestone 02 tests are in `tests/test_m02.py`, 32 Milestone 02B tests in `tests/test_m02b.py`, 18 Milestone 03 tests in `tests/test_m03.py`, 97 Milestone 04 tests in `tests/test_m04.py`, 30 Milestone 05 tests in `tests/test_m05.py`, 2 of which read the real outputs and are skipped without them)
+### Unit tests (250 Python, all passing; 82 Vitest tests in `dashboard/test/`, all passing; 20 Milestone 06.2A tests in `tests/test_m06.py`, 3 of which read the real outputs; the 13 Milestone 01 tests are listed here, 40 Milestone 02 tests are in `tests/test_m02.py`, 32 Milestone 02B tests in `tests/test_m02b.py`, 18 Milestone 03 tests in `tests/test_m03.py`, 97 Milestone 04 tests in `tests/test_m04.py`, 30 Milestone 05 tests in `tests/test_m05.py`, 2 of which read the real outputs and are skipped without them)
 
 - Conversion from old PSGC codes to COD-AB p-codes (3 cases).
 - Merging of OSM query tags (lists and "any value").
@@ -825,7 +827,66 @@ uv run pytest           # offline unit tests
 Newest entries first. Each entry records the date, the milestone, what changed and why, files
 affected, and any effect on results. Future work is appended here as it is done.
 
-### 2026-11-02 — Milestone 06.2A: fresh-clone workflow audit; targeted snapshot made optional, declared evidence (uncommitted)
+### 2026-11-02 — Milestone 06.2A follow-up: archive-aware validation (uncommitted)
+
+**Why:** The author approved the proposal in [docs/M06_2A_REPRODUCIBILITY.md](docs/M06_2A_REPRODUCIBILITY.md)
+§3.3. An entirely absent `data/archive/`, as in a fresh clone, must not block the export.
+Archive-dependent validation must stay strict whenever archives exist. Details are in report §10.
+
+**Changed:**
+- `src/abot/audit.py`: without `data/archive/`, `check_archive` reports one WARN,
+  `m01_archive_present: NOT PERFORMED: data/archive/ absent …` (constant `audit.NOT_PERFORMED`),
+  instead of a FAIL. With `data/archive/` present it is unchanged: the M01 archive missing is
+  FAIL, and a changed or missing archived file is FAIL.
+- `src/abot/dashboard_data.py`:
+  - `classes_check()` (V-S4) returns the recorded block and the problems:
+    - `performed` and strict when a comparison was made;
+    - `not_performed`, with `identical`/`components_compared` null and a `reason`, only when
+      `data/archive/` is absent;
+    - otherwise a V-S4 problem: incomplete archive, comparison not made, another reference, a
+      reference no longer present, or a failed comparison.
+  - The new known issue `ARCHIVE-CHECKS-NOT-PERFORMED` is written if and only if the check is
+    `not_performed`, and the exporter's validation enforces that.
+  - `archive_dir()` helper; `CONTRACT_VERSION` 1.1.0.
+- `src/abot/cli.py`: help text.
+- Dashboard:
+  - `contract/types.ts`: nullable comparison fields, `status`, `reason`.
+  - `version.ts`: supports 1.1.0; 1.0.x bundles still load.
+  - `pages/QualityPage.tsx`: a "Not performed" warning badge, never Yes/No; the reason is shown.
+  - Tests: one new render test. The "newer minor" examples move to 1.2.0.
+- `docs/DASHBOARD_DATA_CONTRACT.md`: version 1.1.0 (minor), with a states table for
+  `component_classes_check`, V-S4, the new known issue and the revision record.
+- `README.md`, `docs/ARCHITECTURE.md`: fresh-clone export behaviour, contract 1.1.0, test counts.
+- `docs/M06_2A_REPRODUCIBILITY.md`: §3.2/§3.3 updated; new §10, which states which validations are
+  and are not performed in a fresh clone, and that a fresh-clone bundle does not reproduce the
+  published results.
+
+**Added:** 10 tests in `tests/test_m06.py`, covering:
+- an absent archive tree;
+- a complete archive with valid references;
+- an archive missing its references;
+- four invalid or inconsistent reference cases and a modified archived file;
+- an end-to-end export with no archives (indicators equal to the installed bundle) and with an
+  incomplete archive (blocked).
+
+**Verified:**
+- pytest: 250 passed.
+- ruff check: passed; `ruff format --check`: the same 8 pre-existing files.
+- Vitest: 82 passed; typecheck clean; production build passed.
+- On the real data (read-only): V-S4 `performed` and passing; `m01_archive_present` PASS.
+- In the isolated scratch copy, with no `data/archive/` and the real audit:
+  - `abot audit`: WARN NOT PERFORMED, 0 FAIL;
+  - `abot export-dashboard`: exit 0, with every indicator file equal to the installed bundle;
+  - with an empty `data/archive/`: the export is blocked by V-S4, and the audit FAILs
+    `m01_archive_present`.
+
+**Effect on results:** none.
+- No methodology, indicator code or archive changed.
+- The installed bundle is unchanged (contract 1.0.0, commit `3073524`, still current). A re-export
+  on this machine gives `component_classes_check.status: performed` and contract 1.1.0, with the
+  same indicator values.
+
+### 2026-11-02 — Milestone 06.2A: fresh-clone workflow audit; targeted snapshot made optional, declared evidence (commit `8ff8aea`)
 
 **Why:** M06.1 found that `abot export-dashboard` failed on a fresh clone unless
 `abot fetch-gaps --allow-download` had run first. Full report:

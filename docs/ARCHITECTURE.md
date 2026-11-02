@@ -18,7 +18,7 @@ ABOT has two parts that never run at the same time and share exactly one interfa
 | Output / input | `data/processed/` (GeoPackage, CSVs) and the bundle `data/processed/dashboard/v1/` | The bundle, copied into the static build |
 
 The interface between them is the **dashboard data bundle**: a versioned set of JSON and GeoJSON
-files with a SHA-256 manifest, defined by the contract `abot-dashboard` 1.0.1. The frontend never
+files with a SHA-256 manifest, defined by the contract `abot-dashboard` 1.1.0. The frontend never
 reads the GeoPackage or CSVs, and never imports Python output files directly.
 
 **Analytical processing and web serving are separate.** All geospatial computation (network
@@ -48,7 +48,7 @@ flowchart LR
 
   subgraph OUT["data/processed (local)"]
     GPKG["abot_iloilo.gpkg + CSVs<br/>(authoritative outputs)"]
-    BUNDLE["dashboard/v1/<br/>manifest + 8 datasets<br/>(contract abot-dashboard 1.0.1)"]
+    BUNDLE["dashboard/v1/<br/>manifest + 8 datasets<br/>(contract abot-dashboard 1.1.0)"]
   end
 
   subgraph WEB["Dashboard: dashboard/ (static)"]
@@ -226,7 +226,7 @@ within 0.005 min ([METHODOLOGY.md](METHODOLOGY.md) §5.4).
 **Optional evidence input.** `abot fetch-gaps --allow-download` sends one targeted Overpass query
 about the three walk-network gaps. It feeds only the gap evidence, never an indicator.
 - `abot components` declares whether it used such a snapshot (`review/m04/snapshot_status.json`).
-- The exporter follows that declaration and refuses any mismatch (check V-S5, contract 1.0.1).
+- The exporter follows that declaration and refuses any mismatch (check V-S5, since contract 1.0.1).
 - Without a snapshot, the gap evidence is exported as `not_examined`.
 
 ## 9. Frontend loading and visualization
@@ -273,13 +273,19 @@ pinned to a date, so a fresh clone reproduces the **method** but not necessarily
 numbers**: OpenStreetMap changes continuously. The manifest makes such a difference detectable, but
 not avoidable.
 
-**Limit:** `abot export-dashboard` also depends on the author's local archives in `data/archive/`,
-which are not distributed:
-- the audit gate fails without the Milestone 01 archive (`m01_archive_present`);
-- check V-S4 requires the pre-taxonomy component reference.
+**Archive-aware validation** (contract 1.1.0). Two checks compare against the author's local
+archives in `data/archive/`, which are not distributed:
+- the audit's `m01_archive_present` and the SHA-256 checks of archived outputs;
+- the exporter's V-S4 comparison of component classes with the pre-taxonomy reference.
 
-A fresh clone therefore cannot export a bundle, even after running every pipeline stage
-([M06_2A_REPRODUCIBILITY.md](M06_2A_REPRODUCIBILITY.md)).
+When `data/archive/` exists, they are strict: a missing reference or a failed comparison blocks
+the export. When the whole directory is absent, as in a fresh clone:
+- they are reported as **NOT PERFORMED** (an audit WARN, and `component_classes_check.status:
+  not_performed`), never as passed;
+- the bundle carries the known issue `ARCHIVE-CHECKS-NOT-PERFORMED`.
+
+Such a bundle does not show that historical results were reproduced
+([M06_2A_REPRODUCIBILITY.md](M06_2A_REPRODUCIBILITY.md) §10.4).
 
 ## 11. Known architectural limitations
 
