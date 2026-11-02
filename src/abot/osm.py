@@ -491,7 +491,16 @@ def possible_duplicates(fac: gpd.GeoDataFrame, max_m: float = 50.0) -> pd.DataFr
     """Same primary category, same normalised name, within `max_m`: flagged for review, kept."""
     from scipy.spatial import cKDTree
 
-    cols = ["osm_type", "osm_id", "name", "category", "reason", "related_osm_type", "related_osm_id", "distance_m"]
+    cols = [
+        "osm_type",
+        "osm_id",
+        "name",
+        "category",
+        "reason",
+        "related_osm_type",
+        "related_osm_id",
+        "distance_m",
+    ]
     if len(fac) < 2:
         return pd.DataFrame(columns=cols)
     xy = np.column_stack([fac.geometry.x, fac.geometry.y])

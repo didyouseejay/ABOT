@@ -69,7 +69,11 @@ def _keep_reviewer_columns(
         prev = old.set_index(key)[list(match)].reindex(cur.index)
         moved = prev.notna().all(axis=1) & (prev != cur).any(axis=1)
         if moved.any():
-            log.warning("%s: ids now name other records, decisions not carried: %s", path.name, list(moved[moved].index))
+            log.warning(
+                "%s: ids now name other records, decisions not carried: %s",
+                path.name,
+                list(moved[moved].index),
+            )
             old = old[~old[key].isin(moved[moved].index)]
     old = old.set_index(key)[REVIEW_COLUMNS]
     hit = new[key].isin(old.index)
@@ -211,7 +215,9 @@ def _edges_gdf(s: Settings) -> gpd.GeoDataFrame:
 
 
 def _barrier_label(b: pd.Series) -> str:
-    detail = " ".join(f"{k}={b[k]}" for k in ("water", "landuse", "waterway", "natural") if isinstance(b.get(k), str))
+    detail = " ".join(
+        f"{k}={b[k]}" for k in ("water", "landuse", "waterway", "natural") if isinstance(b.get(k), str)
+    )
     name = f" '{b['name']}'" if isinstance(b.get("name"), str) else ""
     return f"{b['osm_type']}/{b['osm_id']} {b['kind']} {detail}{name}".strip()
 
@@ -361,7 +367,9 @@ def unconnected_review(s: Settings) -> tuple[gpd.GeoDataFrame, gpd.GeoDataFrame,
     # Per-barangay summary. Cells are counted in the barangay holding most of their area; the
     # population figures are the fractional ones used by the indicators and reliability flags.
     # Unconnected residents stay in every denominator; they are reported here separately.
-    ind = pd.read_csv(s.processed_dir / "barangay_access.csv", dtype={"adm4_pcode": str}).set_index("adm4_pcode")
+    ind = pd.read_csv(s.processed_dir / "barangay_access.csv", dtype={"adm4_pcode": str}).set_index(
+        "adm4_pcode"
+    )
     summ = (
         out.groupby("adm4_pcode")
         .agg(
@@ -373,7 +381,9 @@ def unconnected_review(s: Settings) -> tuple[gpd.GeoDataFrame, gpd.GeoDataFrame,
         .reset_index()
     )
     # Every barangay with unconnected residents, including those that only hold part of such a cell.
-    base = ind.loc[ind["pop_not_connected"] > 0, ["pop_total", "pop_not_connected", "pct_not_connected", "rel_network"]]
+    base = ind.loc[
+        ind["pop_not_connected"] > 0, ["pop_total", "pop_not_connected", "pct_not_connected", "rel_network"]
+    ]
     summ = base.reset_index().merge(summ, on="adm4_pcode", how="left")
     counts = ["cells_not_connected", "cells_barrier_blocked", "cells_beyond_tolerance"]
     summ[counts] = summ[counts].fillna(0).astype(int)
@@ -611,7 +621,9 @@ def record_duplicate_decisions(s: Settings, decisions: dict[str, dict], approval
             continue
         r = idx.loc[rid]
         if (r["flagged_fid"], r["related_fid"]) != (d["flagged_fid"], d["related_fid"]):
-            problems.append(f"{rid}: row names {r['flagged_fid']} / {r['related_fid']}, not the approved records")
+            problems.append(
+                f"{rid}: row names {r['flagged_fid']} / {r['related_fid']}, not the approved records"
+            )
         if r["review_status"] != "pending" or r["reviewer_decision"]:
             problems.append(f"{rid}: already decided ({r['review_status']}, {r['reviewer_decision']})")
     if problems:
@@ -621,7 +633,11 @@ def record_duplicate_decisions(s: Settings, decisions: dict[str, dict], approval
     for rid, d in sorted(decisions.items()):
         i = df.index[df["review_id"] == rid][0]
         before = {c: df.at[i, c] for c in REVIEW_COLUMNS}
-        after = {"review_status": "reviewed", "reviewer_decision": d["decision"], "reviewer_notes": d["notes"]}
+        after = {
+            "review_status": "reviewed",
+            "reviewer_decision": d["decision"],
+            "reviewer_notes": d["notes"],
+        }
         log_rows.append(
             {
                 "logged_utc": now, "action": "record", "file": DUPLICATES_FILE, "review_id": rid,
@@ -658,7 +674,9 @@ def revert_duplicate_decision(s: Settings, review_id: str, reason: str) -> None:
         df.at[i, c] = last[f"before_{c}"]
         entry[f"before_{c}"], entry[f"after_{c}"] = last[f"after_{c}"], last[f"before_{c}"]
     df.to_csv(path, index=False)
-    pd.concat([log, pd.DataFrame([entry])], ignore_index=True).to_csv(review_dir(s) / DECISION_LOG, index=False)
+    pd.concat([log, pd.DataFrame([entry])], ignore_index=True).to_csv(
+        review_dir(s) / DECISION_LOG, index=False
+    )
 
 
 def build(s: Settings) -> None:

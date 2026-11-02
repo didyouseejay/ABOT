@@ -96,7 +96,9 @@ def validate_query(q: str, corridors: list[dict], bbox: tuple) -> list[str]:
     for c in corridors:
         for lat, lon in c["coords"]:
             if not (LAT_RANGE[0] < lat < LAT_RANGE[1] and LON_RANGE[0] < lon < LON_RANGE[1]):
-                problems.append(f"{c['label']}: coordinate {lat},{lon} outside the study area (lat/lon swapped?)")
+                problems.append(
+                    f"{c['label']}: coordinate {lat},{lon} outside the study area (lat/lon swapped?)"
+                )
     for v, rng in ((s, LAT_RANGE), (n, LAT_RANGE), (w, LON_RANGE), (e, LON_RANGE)):
         if not rng[0] < v < rng[1]:
             problems.append(f"bbox value {v} outside the study area")

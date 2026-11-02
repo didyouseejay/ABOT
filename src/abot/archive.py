@@ -69,9 +69,9 @@ def copy_and_record(
             origin[rel] = {
                 "source": f.relative_to(s.root).as_posix() if f.is_relative_to(s.root) else str(f),
                 "bytes": f.stat().st_size,
-                "source_mtime_local": datetime.fromtimestamp(f.stat().st_mtime).astimezone().isoformat(
-                    timespec="seconds"
-                ),
+                "source_mtime_local": datetime.fromtimestamp(f.stat().st_mtime)
+                .astimezone()
+                .isoformat(timespec="seconds"),
             }
     rec = {
         "archive": name,
@@ -105,8 +105,15 @@ def verify(s: Settings, name: str, against_sources: bool = True) -> dict:
             if src.exists() and sha256(src) != h:
                 bad_src.append(f)
     listed = set(rec["files"])
-    extra = sorted(p.relative_to(root).as_posix() for p in _files(root) if p.relative_to(root).as_posix() not in listed)
-    return {"files": len(rec["files"]), "archive_mismatch": bad_arch, "source_mismatch": bad_src, "extra_in_archive": extra}
+    extra = sorted(
+        p.relative_to(root).as_posix() for p in _files(root) if p.relative_to(root).as_posix() not in listed
+    )
+    return {
+        "files": len(rec["files"]),
+        "archive_mismatch": bad_arch,
+        "source_mismatch": bad_src,
+        "extra_in_archive": extra,
+    }
 
 
 def remove_verified_originals(s: Settings, name: str, prefixes: tuple[str, ...]) -> list[str]:
@@ -124,7 +131,9 @@ def remove_verified_originals(s: Settings, name: str, prefixes: tuple[str, ...])
     targets = {f: s.root / rec["origin"][f]["source"] for f in rec["files"] if f.split("/")[0] in prefixes}
     missing = [f for f, p in targets.items() if not p.exists()]
     if chk["archive_mismatch"] or chk["source_mismatch"] or chk["extra_in_archive"] or missing or not targets:
-        raise RuntimeError(f"archive {name} not verified, nothing removed: {chk}, missing originals {missing}")
+        raise RuntimeError(
+            f"archive {name} not verified, nothing removed: {chk}, missing originals {missing}"
+        )
     dirs = {p.parent for p in targets.values()}
     # Each archived source folder (parent of its top-level files) must hold exactly the recorded files.
     recorded = {p.resolve() for p in targets.values()}
@@ -191,7 +200,11 @@ def archive_m04_pre_access_taxonomy(s: Settings, crosswalk: Path) -> dict:
     """M04 methodology review: the review/m04 evidence and the A3 layer as built with the pre-review
     access labels, before `abot components` regenerates them, plus the old-to-new label crosswalk."""
     d = s.processed_dir
-    sources = {"review_m04": d / "review" / "m04", "component_aware": d / "component_aware", "crosswalk": crosswalk}
+    sources = {
+        "review_m04": d / "review" / "m04",
+        "component_aware": d / "component_aware",
+        "crosswalk": crosswalk,
+    }
     note = (
         "review/m04 and component_aware as built before the M04 access-taxonomy revision. Old labels "
         "(ineligible, resident_restricted, private_uncertain, uncertain) inferred residents from highway=service "

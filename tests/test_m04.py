@@ -81,7 +81,9 @@ def test_no_artificial_link_between_close_components():
     near = {10: [(0, 1), (100, 1)]}
     G = _graph(MAIN | near)
     before = [sorted(c) for c in C.ordered_components(G)]
-    res, _ = C.evaluate(CFG, G, _cells((50, 30), (950, -5)), _roles(CLINIC), NO_BARRIERS, extra_fac_graph=_graph(MAIN))
+    res, _ = C.evaluate(
+        CFG, G, _cells((50, 30), (950, -5)), _roles(CLINIC), NO_BARRIERS, extra_fac_graph=_graph(MAIN)
+    )
     assert [sorted(c) for c in C.ordered_components(G)] == before and len(before) == 2
     assert not res.at[0, "network_node"] and np.isnan(res.at[0, "t_walk_health_primary_care"])
     assert res.at[1, "network_node"] and res.at[1, "t_walk_health_primary_care"] < 1
@@ -140,7 +142,9 @@ def test_a3_keeps_local_and_citywide_times_in_separate_columns():
     assert list(a3c["a3_category"]) == ["locally_connected", "network_connected", "unconnected"]
     assert np.isnan(local["t_walk_education_basic_citywide"]) and local["t_walk_education_basic_internal"] < 2
     assert np.isnan(local["t_walk_health_primary_care_internal"])  # the clinic is not in its component
-    assert main["t_walk_health_primary_care_citywide"] < 2 and np.isnan(main["t_walk_health_primary_care_internal"])
+    assert main["t_walk_health_primary_care_citywide"] < 2 and np.isnan(
+        main["t_walk_health_primary_care_internal"]
+    )
     assert a3c.filter(like="t_walk_").iloc[2].isna().all()  # unconnected: no time of either kind
 
 
@@ -207,13 +211,21 @@ def test_classification_summary_counts_ways_gates_cells_and_residents():
     gates = pd.DataFrame({"node": [9], "gate_class": ["private"], "flag_for_review": [True],
                           "field_verification_required": [True], "component": ["main"]})  # fmt: skip
     a1 = pd.DataFrame({"status": [A.OK, A.OK, A.BEYOND], "u": [2, 3, None], "v": [1, 4, None]})
-    out = C.classification_summary(et, gates, ways, dict.fromkeys([1, 2, 3, 4], "main"), a1, pd.Series([5.0, 7.0, 9.0]))
+    out = C.classification_summary(
+        et, gates, ways, dict.fromkeys([1, 2, 3, 4], "main"), a1, pd.Series([5.0, 7.0, 9.0])
+    )
     w = out[out["kind"] == "way"].set_index("access_class")
     assert w.at["no", "ways"] == 1 and w.at["no", "km"] == 0.1
-    assert w.at["no", "public_pedestrian_status"] == "prohibited" and w.at["no", "pop_attached_A1"] == 5.0 and w.at["untagged", "pop_attached_A1"] == 7.0
+    assert (
+        w.at["no", "public_pedestrian_status"] == "prohibited"
+        and w.at["no", "pop_attached_A1"] == 5.0
+        and w.at["untagged", "pop_attached_A1"] == 7.0
+    )
     g = out[out["kind"] == "gate node"].set_index("access_class")
     assert g.at["private", "nodes_flag_for_review"] == 1 and g.at["private", "cells_attached_A1"] == 1
-    assert g.at["private", "nodes_field_verification"] == 1 and "flag for review" in g.at["private", "treatment"]
+    assert (
+        g.at["private", "nodes_field_verification"] == 1 and "flag for review" in g.at["private", "treatment"]
+    )
 
 
 # --- targeted snapshot evidence ------------------------------------------------------------------
@@ -238,7 +250,13 @@ def test_snapshot_evidence_finds_only_links_that_touch_both_sides():
 
 def _corridor_snap(link_tags: dict, gate_tags: dict | None, tags8: dict | None = None):
     """F001 way (nodes 1-2) and main way (3-4) in the walk cache; links 7 (2-5) and 8 (5-3) outside it."""
-    pts = {1: (122.5700, 10.72), 2: (122.5710, 10.72), 5: (122.5715, 10.72), 3: (122.5720, 10.72), 4: (122.5730, 10.72)}
+    pts = {
+        1: (122.5700, 10.72),
+        2: (122.5710, 10.72),
+        5: (122.5715, 10.72),
+        3: (122.5720, 10.72),
+        4: (122.5730, 10.72),
+    }
     nodes = [{"type": "node", "id": n, "lon": x, "lat": y, **({"tags": gate_tags} if n == 5 and gate_tags else {})}
              for n, (x, y) in pts.items()]  # fmt: skip
     ways = [{"type": "way", "id": 7, "nodes": [2, 5], "tags": {"highway": "service", **link_tags}},
@@ -266,7 +284,10 @@ def test_corridor_physical_link_with_private_tags_is_not_public_access():
 def test_corridor_one_private_way_on_the_path_is_enough():
     # way 7 private, way 8 untagged: the old all-ways rule called this unverified
     r = _corridor_snap({"access": "private"}, None, tags8={}).iloc[0]
-    assert r["path_mapped_access_status"] == "private" and r["public_pedestrian_access"] == "restricted_by_mapped_tags"
+    assert (
+        r["path_mapped_access_status"] == "private"
+        and r["public_pedestrian_access"] == "restricted_by_mapped_tags"
+    )
     assert "way/7" in r["classification_reason"]
 
 
@@ -295,7 +316,10 @@ def test_corridor_foot_yes_override_is_not_restricted_but_still_needs_field_chec
 @pytest.mark.parametrize(
     "link, gate",
     [
-        ({"highway": "tertiary", "access": "private"}, {"barrier": "gate", "access": "private"}),  # Gustilo St
+        (
+            {"highway": "tertiary", "access": "private"},
+            {"barrier": "gate", "access": "private"},
+        ),  # Gustilo St
         ({"access": "private"}, None),  # F001 northern private way, no gate mapped
         ({"access": "private"}, {"barrier": "gate", "access": "private"}),  # fishport service corridor
     ],
@@ -333,7 +357,9 @@ def test_snapshot_evidence_absent_removes_stale_tables_and_reports_cache_only(tm
 
 
 def test_readme_snapshot_section_matches_the_evidence():
-    gap = pd.DataFrame({"fragment": ["F001"], "remaining_unverified": [C.remaining_unverified(True, {"x": 1})]})
+    gap = pd.DataFrame(
+        {"fragment": ["F001"], "remaining_unverified": [C.remaining_unverified(True, {"x": 1})]}
+    )
     cor = _corridor_snap({"access": "private"}, {"barrier": "gate", "access": "private"})
     present = "\n".join(C.snapshot_readme_lines(
         {"status": {"obtained": True, "snapshot": "m04_gaps_X.json", "link_candidates": 1, "elements": 7,
@@ -409,13 +435,17 @@ def test_private_service_road_is_not_resident_only():
     a = C.access_assessment({"highway": "service", "access": "private"})
     assert a["mapped_access_status"] == "private" and a["authorized_group"] == "unspecified"
     assert a["public_pedestrian_status"] == "not_public" and a["field_verification_required"]
-    assert "resident" not in a["authorized_group"] and "names no authorised group" in a["classification_reason"]
+    assert (
+        "resident" not in a["authorized_group"] and "names no authorised group" in a["classification_reason"]
+    )
     res = C.access_assessment({"highway": "service", "access": "residents"})
     assert res["authorized_group"] == "residents_named_by_tag"
 
 
 # 2. The road class never weakens (or changes) a mapped restriction.
-@pytest.mark.parametrize("hw", ["tertiary", "primary", "service", "residential", "footway", "living_street", None])
+@pytest.mark.parametrize(
+    "hw", ["tertiary", "primary", "service", "residential", "footway", "living_street", None]
+)
 def test_highway_class_never_changes_the_status(hw):
     tags = {"access": "private"} | ({"highway": hw} if hw else {})
     a = C.access_assessment(tags)
@@ -435,7 +465,10 @@ def test_private_gate_is_not_public_and_needs_verification():
 def test_untagged_gate_is_unverified_not_public():
     a = C.access_assessment({"barrier": "gate"}, gate=True)
     assert a["mapped_access_status"] == "untagged"
-    assert a["public_pedestrian_status"] == "not_restricted_by_tags_unverified" and a["field_verification_required"]
+    assert (
+        a["public_pedestrian_status"] == "not_restricted_by_tags_unverified"
+        and a["field_verification_required"]
+    )
 
 
 # 6. Missing tags are not explicit public access.
@@ -458,7 +491,10 @@ def test_foot_tag_decides_and_the_override_is_recorded():
 
 def test_permissive_is_permitted_but_revocable():
     a = C.access_assessment({"access": "permissive"})
-    assert a["public_pedestrian_status"] == "permitted_by_tag" and "may be withdrawn" in a["classification_reason"]
+    assert (
+        a["public_pedestrian_status"] == "permitted_by_tag"
+        and "may be withdrawn" in a["classification_reason"]
+    )
 
 
 # 8. Conflicts are deterministic, transparent and flagged, never unrestricted public.
@@ -588,13 +624,20 @@ def test_archive_copies_hashes_keeps_originals_and_detects_changes(tmp_path):
     rec = archive.copy_and_record(s, "hist_old", {"processed": run}, "test")
     assert set(rec["files"]) == {"processed/a.csv", "processed/sub/b.json"} and rec["originals_kept"]
     assert (run / "a.csv").exists()  # copied, not moved
-    assert archive.verify(s, "hist_old") == {"files": 2, "archive_mismatch": [], "source_mismatch": [], "extra_in_archive": []}
+    assert archive.verify(s, "hist_old") == {
+        "files": 2,
+        "archive_mismatch": [],
+        "source_mismatch": [],
+        "extra_in_archive": [],
+    }
     a = audit.Audit(s, DEFAULT_CONFIG)
     a.check_archive()
     assert {f.check: f.status for f in a.findings}["hist_old"] == audit.PASS
     with pytest.raises(FileExistsError):
         archive.copy_and_record(s, "hist_old", {"processed": run}, "again")  # never overwritten
-    (tmp_path / "data" / "archive" / "hist_old" / "processed" / "a.csv").write_text("x\n2\n", encoding="utf-8")
+    (tmp_path / "data" / "archive" / "hist_old" / "processed" / "a.csv").write_text(
+        "x\n2\n", encoding="utf-8"
+    )
     assert archive.verify(s, "hist_old")["archive_mismatch"] == ["processed/a.csv"]
 
 
@@ -634,7 +677,9 @@ def test_cleanup_refuses_when_the_archive_changed_or_unrecorded_files_exist(tmp_
     with pytest.raises(RuntimeError, match="unrecorded"):
         archive.remove_verified_originals(s, "hist_old", ("processed",))
     (run / "new.csv").unlink()
-    (tmp_path / "data" / "archive" / "hist_old" / "processed" / "a.csv").write_text("tampered", encoding="utf-8")
+    (tmp_path / "data" / "archive" / "hist_old" / "processed" / "a.csv").write_text(
+        "tampered", encoding="utf-8"
+    )
     with pytest.raises(RuntimeError, match="not verified"):
         archive.remove_verified_originals(s, "hist_old", ("processed",))
     assert (run / "a.csv").exists()
@@ -650,7 +695,9 @@ def test_e7_archive_record_exists_and_names_the_superseded_run():
     if not rec["originals_kept"]:  # M04 follow-up: originals removed after verification
         assert "config" not in rec["originals_removed"]["prefixes"]
         assert not (PROJECT_ROOT / "data" / "processed" / "e7_buffer_3km").exists()
-    assert any(f.startswith("interim/") for f in rec["files"]) and any(f.startswith("processed/") for f in rec["files"])
+    assert any(f.startswith("interim/") for f in rec["files"]) and any(
+        f.startswith("processed/") for f in rec["files"]
+    )
 
 
 def test_facility_review_summary_preserves_reviewer_columns(tmp_path):
@@ -667,7 +714,9 @@ def test_facility_review_summary_preserves_reviewer_columns(tmp_path):
     ).to_csv(m03 / "duplicates_assessment.csv", index=False)  # fmt: skip
     out = C.facility_review_summary(s)
     assert out["review_status"].tolist() == ["pending", "decided"]
-    assert out.at[1, "reviewer_decision"] == "same_keep_related" and out.at[1, "reviewer_notes"] == "user note"
+    assert (
+        out.at[1, "reviewer_decision"] == "same_keep_related" and out.at[1, "reviewer_notes"] == "user note"
+    )
     assert pd.isna(out.at[0, "reviewer_decision"]) and "404" in out.at[0, "evidence_still_needed"]
 
 
@@ -675,7 +724,11 @@ def test_facility_review_summary_uses_live_decisions_only_for_the_same_pair(tmp_
     s = _project(tmp_path)
     m03 = s.processed_dir / "review" / "m03"
     m03.mkdir(parents=True)
-    base = {"review_id": ["D01", "D13"], "flagged_fid": ["node/1", "way/2"], "related_fid": ["node/3", "way/4"]}
+    base = {
+        "review_id": ["D01", "D13"],
+        "flagged_fid": ["node/1", "way/2"],
+        "related_fid": ["node/3", "way/4"],
+    }
     pd.DataFrame({**base, "flagged_name": ["PNB", "DBP"], "distance_m": [5.1, 4.0], "desk_assessment": ["d", "s"],
                   "effect_if_merged": ["x", "y"], "review_status": ["pending"] * 2, "reviewer_decision": [None] * 2,
                   "reviewer_notes": [None] * 2}).to_csv(m03 / "duplicates_assessment.csv", index=False)  # fmt: skip
@@ -718,7 +771,10 @@ def test_decisions_are_recorded_logged_and_leave_others_pending(tmp_path):
     review.record_duplicate_decisions(s, DEC, "test approval")
     df = pd.read_csv(review.review_dir(s) / review.DUPLICATES_FILE, dtype=str, keep_default_na=False)
     got = df.set_index("review_id")
-    assert got.at["D01", "reviewer_decision"] == "distinct_keep_both" and got.at["D01", "review_status"] == "reviewed"
+    assert (
+        got.at["D01", "reviewer_decision"] == "distinct_keep_both"
+        and got.at["D01", "review_status"] == "reviewed"
+    )
     assert got.at["D10", "review_status"] == "pending" and got.at["D10", "reviewer_decision"] == ""
     assert len(df) == 3 and got.at["D13", "flagged_osm_tags"] == '{"name": "DBP"}'  # nothing deleted
     log = pd.read_csv(review.review_dir(s) / review.DECISION_LOG, dtype=str, keep_default_na=False)
@@ -775,7 +831,10 @@ def test_audit_flags_an_experiment_built_with_another_configuration(tmp_path):
     exp = tmp_path / "config" / "experiments"
     exp.mkdir(parents=True)
     path = exp / "sens.yaml"
-    path.write_text(f"extends: {DEFAULT_CONFIG.as_posix()}\npaths:\n  data_dir: data\n  run_name: sens\n", encoding="utf-8")
+    path.write_text(
+        f"extends: {DEFAULT_CONFIG.as_posix()}\npaths:\n  data_dir: data\n  run_name: sens\n",
+        encoding="utf-8",
+    )
     es = Settings(read_config(path), root=tmp_path)
     es.ensure_dirs()
     qa.record_stage(es, "report")

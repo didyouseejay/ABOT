@@ -179,7 +179,9 @@ def edge_table(G: nx.MultiDiGraph, ways: dict, nodes: dict) -> tuple[pd.DataFram
 
 
 def set_walk_time(G: nx.MultiDiGraph, mps: float) -> None:
-    nx.set_edge_attributes(G, {(u, v, k): d["length"] / mps for u, v, k, d in G.edges(keys=True, data=True)}, "travel_time")
+    nx.set_edge_attributes(
+        G, {(u, v, k): d["length"] / mps for u, v, k, d in G.edges(keys=True, data=True)}, "travel_time"
+    )
 
 
 def ordered_components(G: nx.MultiDiGraph) -> list[set]:
@@ -208,7 +210,9 @@ def evaluate(
     edges = A.EdgeIndex(G)
     cc = A.connect_points(cells.geometry, edges, checker, cfg, cfg["origin_radius_m"])
     fac_pts = roles.drop_duplicates("fid_key").set_index("fid_key")
-    fc = A.connect_points(fac_pts.geometry, edges, checker, cfg, cfg["facility_radius_m"], cfg["facility_max_connector_m"])
+    fc = A.connect_points(
+        fac_pts.geometry, edges, checker, cfg, cfg["facility_radius_m"], cfg["facility_max_connector_m"]
+    )
     if extra_fac_graph is not None:
         fm = A.connect_points(
             fac_pts.geometry, A.EdgeIndex(extra_fac_graph), checker, cfg, cfg["facility_radius_m"],
@@ -222,7 +226,9 @@ def evaluate(
     out["conn_m"] = cc["conn_m"].round(1)
     out["u"] = cc["u"]
     out["v"] = cc["v"]
-    out["network_node"] = [u in main if st == A.OK else False for u, st in zip(cc["u"], cc["status"], strict=True)]
+    out["network_node"] = [
+        u in main if st == A.OK else False for u, st in zip(cc["u"], cc["status"], strict=True)
+    ]
     GR = G.reverse(copy=True)
     for gname in s["indicator_groups"]:
         sub = fc.loc[fc.index.intersection(A.group_facilities(s, roles, gname)["fid_key"])]
@@ -242,7 +248,10 @@ def classify_component(r: dict) -> tuple[str, str]:
     if r["share_restricted"] >= 0.5:
         return "restricted_access", "at least half the length is mapped no, private or residents"
     if r["share_customers_uncertain"] >= 0.5 or r["gates_restricted"] > 0:
-        return "access_uncertain", "mostly customers/unknown access, or a gate mapped no, private or residents"
+        return (
+            "access_uncertain",
+            "mostly customers/unknown access, or a gate mapped no, private or residents",
+        )
     if r["noexit_at_gap"]:
         return "isolated_mapped_dead_end", "noexit=yes at the gap: a mapper asserted there is no link there"
     if r["gap_to_main_m"] <= GEOMETRY_ERROR_M:
@@ -268,7 +277,9 @@ def compare_component_classes(reference: pd.DataFrame, inv: pd.DataFrame) -> dic
     Raises on any difference (a deliberate class change needs a new reference, not a silent rerun)."""
     old, new = reference.set_index("fragment"), inv.set_index("fragment")
     if set(old.index) != set(new.index):
-        raise RuntimeError(f"component ids differ from the reference: {sorted(set(old.index) ^ set(new.index))[:10]}")
+        raise RuntimeError(
+            f"component ids differ from the reference: {sorted(set(old.index) ^ set(new.index))[:10]}"
+        )
     cols = [c for c in INVARIANT_COLUMNS if c in old.columns]
     diff = [
         f"{f} {c}: {old.at[f, c]!r} -> {new.at[f, c]!r}"
@@ -307,7 +318,11 @@ def component_inventory(
         by_cls = g.groupby("way_class")["length"].sum() / 2000
         xs = [G_all.nodes[n]["x"] for n in nodes_c]
         ys = [G_all.nodes[n]["y"] for n in nodes_c]
-        bb = gpd.GeoSeries([shapely.box(min(xs), min(ys), max(xs), max(ys))], crs=s.projected_crs).to_crs(4326).total_bounds
+        bb = (
+            gpd.GeoSeries([shapely.box(min(xs), min(ys), max(xs), max(ys))], crs=s.projected_crs)
+            .to_crs(4326)
+            .total_bounds
+        )
         gate_counts = pd.Series([c for gl in g["gates"] for c in gl]).value_counts() / 2
         r = {
             "fragment": cid,
@@ -348,7 +363,9 @@ def component_inventory(
         rows.append(r)
     inv = pd.DataFrame(rows)
     main_geom = main_edges.geometry.union_all()
-    inv.loc[inv["fragment"] == "main", "km_inside_city"] = round(main_geom.intersection(city).length / 1000, 2)
+    inv.loc[inv["fragment"] == "main", "km_inside_city"] = round(
+        main_geom.intersection(city).length / 1000, 2
+    )
     cls = [classify_component(r) for r in inv.to_dict("records")]
     inv["component_class"] = [c for c, _ in cls]
     inv["class_reason"] = [r for _, r in cls]
@@ -392,7 +409,9 @@ def _w(cells, mask) -> float:
     return round(float(cells.loc[mask, "pop"].sum()), 1)
 
 
-def approach_summary(s: Settings, name: str, cells, res: pd.DataFrame, category: pd.Series, G, n_comp: int) -> list[dict]:
+def approach_summary(
+    s: Settings, name: str, cells, res: pd.DataFrame, category: pd.Series, G, n_comp: int
+) -> list[dict]:
     total = float(cells["pop"].sum())
     rows = [{
         "approach": name, "group": "_population", "components_retained": n_comp,
@@ -407,7 +426,9 @@ def approach_summary(s: Settings, name: str, cells, res: pd.DataFrame, category:
         # A2 mixes internal and citywide times in one indicator (that is the approach); A1/A3 use
         # citywide (network-connected) times only.
         use = (~np.isnan(t)) & (citywide if name != "A2_all_eligible" else res["status"].eq(A.OK).to_numpy())
-        loc = (~np.isnan(t)) & (category != "network_connected").to_numpy() & res["status"].eq(A.OK).to_numpy()
+        loc = (
+            (~np.isnan(t)) & (category != "network_connected").to_numpy() & res["status"].eq(A.OK).to_numpy()
+        )
         rows.append(
             {
                 "approach": name, "group": g,
@@ -509,7 +530,9 @@ def a3_barangay(s: Settings, a3c: pd.DataFrame, pieces: pd.DataFrame, brgy: pd.D
                 row[f"walk_{grp}_mean_min"] = round(float(np.average(t[ok], weights=w[ok])), 2)
                 row[f"walk_{grp}_p90_min"] = round(weighted_quantile(t[ok], w[ok], 0.9), 2)
             for th in ths:
-                row[f"walk_{grp}_pct_le{th}"] = round(100 * float(w[ok & (t <= th)].sum()) / total, 2) if total else 0.0
+                row[f"walk_{grp}_pct_le{th}"] = (
+                    round(100 * float(w[ok & (t <= th)].sum()) / total, 2) if total else 0.0
+                )
             ti = g[f"t_walk_{grp}_internal"].to_numpy(dtype=float)
             for c, short in (("locally_connected", "local"), ("access_uncertain", "uncertain")):
                 m = (g["a3_category"] == c).to_numpy() & ~np.isnan(ti)
@@ -546,9 +569,12 @@ def a3_citywide(s: Settings, cells: pd.DataFrame, a1: pd.DataFrame, a3c: pd.Data
                     "A3_uncertain_internal_pop": round(float(w[(a3c["a3_category"] == "access_uncertain").to_numpy() & (ti <= th)].sum()), 1),
                 }
             )  # fmt: skip
+
         def mean(t):
             ok = ~np.isnan(t)
-            return round(float(np.average(t[ok], weights=w[ok])), 2) if ok.any() and w[ok].sum() > 0 else np.nan
+            return (
+                round(float(np.average(t[ok], weights=w[ok])), 2) if ok.any() and w[ok].sum() > 0 else np.nan
+            )
 
         rows.append({"metric": f"walk_{g}_mean_min", "A1": mean(t1), "A3": mean(t3)})
     return pd.DataFrame(rows)
@@ -571,7 +597,9 @@ def write_a3_layer(s: Settings, cells, results, cats, comp_of, comp_class, befor
     gpkg = out / "component_aware.gpkg"
     if gpkg.exists():
         gpkg.unlink()  # derived file, fully rewritten
-    brgy[["adm4_pcode", "geometry"]].merge(bt, on="adm4_pcode").to_file(gpkg, layer="barangay_access_a3", driver="GPKG")
+    brgy[["adm4_pcode", "geometry"]].merge(bt, on="adm4_pcode").to_file(
+        gpkg, layer="barangay_access_a3", driver="GPKG"
+    )
     gpd.GeoDataFrame(a3c, geometry=gpd.points_from_xy(a3c["lon"], a3c["lat"]), crs=4326).to_file(
         gpkg, layer="cells_a3", driver="GPKG"
     )
@@ -649,12 +677,17 @@ def build(s: Settings) -> None:
     # B1 inventory
     log.info("component inventory (%d components) ...", len(comps))
     inv = component_inventory(s, G_all, comps, et, nodes, bar)
-    comp_of = {n: "main" for n in main} | {n: f"F{i:03d}" for i, c in enumerate(comps[1:], start=1) for n in c}
+    comp_of = {n: "main" for n in main} | {
+        n: f"F{i:03d}" for i, c in enumerate(comps[1:], start=1) for n in c
+    }
     comp_class = dict(zip(inv["fragment"], inv["component_class"], strict=True))
     ref = s.data_dir / "archive" / TAXONOMY_REFERENCE / "review_m04" / "component_inventory.csv"
     check = {"reference": None, "note": "pre-taxonomy reference archive absent: not compared"}
     if ref.exists():
-        check = {"reference": ref.relative_to(s.root).as_posix(), **compare_component_classes(pd.read_csv(ref), inv)}
+        check = {
+            "reference": ref.relative_to(s.root).as_posix(),
+            **compare_component_classes(pd.read_csv(ref), inv),
+        }
         log.info("component classes identical to the pre-taxonomy reference (%d components)", len(inv))
     (out / "taxonomy_check.json").write_text(json.dumps(check, indent=2), encoding="utf-8")
 
@@ -664,16 +697,28 @@ def build(s: Settings) -> None:
     keep2 = {n for n in G_all if comp_class[comp_of[n]] in ELIGIBLE_A2}
     keep3 = {n for n in G_all if comp_class[comp_of[n]] in ELIGIBLE_A3}
     G2, G3 = G_all.subgraph(keep2).copy(), G_all.subgraph(keep3).copy()
-    fac = roles.drop_duplicates("fid_key").set_index("fid_key")[["name", "category", "subtype", "tier", "inside_city"]]
-    for name, G, extra in (("A1_baseline", G1, None), ("A2_all_eligible", G2, None), ("A3_component_aware", G3, G1)):
+    fac = roles.drop_duplicates("fid_key").set_index("fid_key")[
+        ["name", "category", "subtype", "tier", "inside_city"]
+    ]
+    for name, G, extra in (
+        ("A1_baseline", G1, None),
+        ("A2_all_eligible", G2, None),
+        ("A3_component_aware", G3, G1),
+    ):
         log.info("evaluating %s ...", name)
         res, fc = evaluate(s, G, cells, roles, checker, extra)
         cat = categorise(res, res["u"].map(comp_of), comp_class)
         results[name], cats[name] = res, cat
         ok = fc[fc["status"] == A.OK]
-        fac[f"components_{name}"] = ok["u"].map(comp_of).groupby(level=0).agg(lambda x: ";".join(sorted(set(x))))
-        n_comp = sum(1 for c in inv.itertuples() if c.fragment == "main" or (name != "A1_baseline" and (
-            c.retained_A2 if name == "A2_all_eligible" else c.retained_A3)))
+        fac[f"components_{name}"] = (
+            ok["u"].map(comp_of).groupby(level=0).agg(lambda x: ";".join(sorted(set(x))))
+        )
+        n_comp = sum(
+            1
+            for c in inv.itertuples()
+            if c.fragment == "main"
+            or (name != "A1_baseline" and (c.retained_A2 if name == "A2_all_eligible" else c.retained_A3))
+        )
         summary += approach_summary(s, name, cells, res, cat, G, n_comp)
     # Approach 1 must reproduce the saved baseline exactly.
     base_cols = [f"t_walk_{g}" for g in s["indicator_groups"]]
@@ -697,26 +742,39 @@ def build(s: Settings) -> None:
     inv["pop_attached_A3"] = inv["fragment"].map(cells["pop"].groupby(att).sum()).fillna(0).round(1)
     for g in ("health_primary_care", "education_basic"):
         reach = a3[f"t_walk_{g}"].notna() & att.ne("main")
-        inv[f"pop_internal_{g}_reachable"] = inv["fragment"].map(cells["pop"][reach].groupby(att[reach]).sum()).fillna(0).round(1)
+        inv[f"pop_internal_{g}_reachable"] = (
+            inv["fragment"].map(cells["pop"][reach].groupby(att[reach]).sum()).fillna(0).round(1)
+        )
     inv.drop(columns=[]).to_csv(out / "component_inventory.csv", index=False)
 
     # Per-cell comparison (focus: cells whose category or times differ)
     pc = cells[["cell_id", "pop", "adm4_pcode", "centre_adm4_pcode"]].copy()
-    names = gpd.read_file(s.gpkg, layer="barangays", ignore_geometry=True).set_index("adm4_pcode")["adm4_name"]
+    names = gpd.read_file(s.gpkg, layer="barangays", ignore_geometry=True).set_index("adm4_pcode")[
+        "adm4_name"
+    ]
     pc["barangay"] = pc["adm4_pcode"].map(names)
-    pc["excluded_resolved_separately"] = pc["adm4_pcode"].isin(EXCLUDED_BARANGAYS) | pc["centre_adm4_pcode"].isin(EXCLUDED_BARANGAYS)
+    pc["excluded_resolved_separately"] = pc["adm4_pcode"].isin(EXCLUDED_BARANGAYS) | pc[
+        "centre_adm4_pcode"
+    ].isin(EXCLUDED_BARANGAYS)
     for name, cat in cats.items():
         pc[f"cat_{name}"] = cat.values
         pc[f"conn_m_{name}"] = results[name]["conn_m"].values
-        pc[f"component_{name}"] = results[name]["u"].map(comp_of).where(results[name]["status"] == A.OK).values
+        pc[f"component_{name}"] = (
+            results[name]["u"].map(comp_of).where(results[name]["status"] == A.OK).values
+        )
         for g in ("health_hospital", "health_primary_care", "education_basic"):
             pc[f"t_{g}_{name}"] = results[name][f"t_walk_{g}"].values
     # fillna: two unconnected cells (no component) must compare equal, not NaN != NaN
-    changed = (pc["cat_A1_baseline"] != pc["cat_A3_component_aware"]) | (pc["cat_A1_baseline"] != pc["cat_A2_all_eligible"]) | (
-        pc["component_A1_baseline"].fillna("") != pc["component_A3_component_aware"].fillna(""))
+    changed = (
+        (pc["cat_A1_baseline"] != pc["cat_A3_component_aware"])
+        | (pc["cat_A1_baseline"] != pc["cat_A2_all_eligible"])
+        | (pc["component_A1_baseline"].fillna("") != pc["component_A3_component_aware"].fillna(""))
+    )
     pc[changed].sort_values("pop", ascending=False).to_csv(out / "cells_changed_by_approach.csv", index=False)
 
-    tr = pd.crosstab(pc["cat_A1_baseline"], pc["cat_A3_component_aware"], values=pc["pop"], aggfunc="sum").round(1)
+    tr = pd.crosstab(
+        pc["cat_A1_baseline"], pc["cat_A3_component_aware"], values=pc["pop"], aggfunc="sum"
+    ).round(1)
     tr.to_csv(out / "transition_A1_to_A3_pop.csv")
     by_b = (
         pc[changed & ~pc["excluded_resolved_separately"]]
@@ -743,7 +801,9 @@ def build(s: Settings) -> None:
             "km_removed_main": round(sel["length"].sum() / 2000, 2),
         }  # fmt: skip
         if sel.empty:
-            row.update(pop_lose_network=0.0, pop_become_local=0.0, pop_become_unconnected=0.0, pop_time_up_gt1min=0.0)
+            row.update(
+                pop_lose_network=0.0, pop_become_local=0.0, pop_become_unconnected=0.0, pop_time_up_gt1min=0.0
+            )
             impact.append(row)
             continue
         Gs = G1.copy()
@@ -785,7 +845,9 @@ def build(s: Settings) -> None:
     cls_tab = und.groupby(["way_class", "in_main"])["length"].agg(["size", "sum"]).reset_index()
     cls_tab["km"] = (cls_tab["sum"] / 1000).round(2)
     cls_tab["policy_provisional"] = cls_tab["way_class"].map(POLICY)
-    cls_tab.drop(columns="sum").rename(columns={"size": "edges"}).to_csv(out / "access_classes.csv", index=False)
+    cls_tab.drop(columns="sum").rename(columns={"size": "edges"}).to_csv(
+        out / "access_classes.csv", index=False
+    )
     restricted = []
     for wid, w in sorted(ways.items()):
         t = w.get("tags", {})
@@ -825,7 +887,11 @@ def build(s: Settings) -> None:
 # --- Phase A: targeted snapshot evidence (when the user's approved fetch has produced one) -------
 
 
-SNAPSHOT_FILES = ["snapshot_gap_elements.csv", "snapshot_link_candidates.csv", "snapshot_corridor_analysis.csv"]
+SNAPSHOT_FILES = [
+    "snapshot_gap_elements.csv",
+    "snapshot_link_candidates.csv",
+    "snapshot_corridor_analysis.csv",
+]
 
 
 def gap_snapshot_evidence(s: Settings, out: Path, ways: dict, nodes: dict, comp_by_way: dict) -> dict:
@@ -848,7 +914,9 @@ def gap_snapshot_evidence(s: Settings, out: Path, ways: dict, nodes: dict, comp_
         return {"status": status, "corridors": pd.DataFrame()}
     snap, meta = latest
     elements, links = targeted.snapshot_evidence(snap, ways, comp_by_way)
-    corridors = targeted.corridor_analysis(snap, ways, nodes, comp_by_way, links) if len(links) else pd.DataFrame()
+    corridors = (
+        targeted.corridor_analysis(snap, ways, nodes, comp_by_way, links) if len(links) else pd.DataFrame()
+    )
     elements.to_csv(out / "snapshot_gap_elements.csv", index=False)
     links.to_csv(out / "snapshot_link_candidates.csv", index=False)
     corridors.to_csv(out / "snapshot_corridor_analysis.csv", index=False)
@@ -1018,7 +1086,9 @@ def remaining_unverified(snapshot_obtained: bool, link: dict | None) -> str:
             "connection is not public pedestrian access")  # fmt: skip
 
 
-def gap_investigation(s, G_all, comps, inv, nm, ways, nodes, gates, snapshot: dict | None = None) -> pd.DataFrame:
+def gap_investigation(
+    s, G_all, comps, inv, nm, ways, nodes, gates, snapshot: dict | None = None
+) -> pd.DataFrame:
     """Tabuc Suba (F001) and Baybay Tanza (F100, F101) gaps.
 
     `cache_*` columns are measured on the walk-filtered cache; `snapshot_*` columns come from the
@@ -1036,7 +1106,11 @@ def gap_investigation(s, G_all, comps, inv, nm, ways, nodes, gates, snapshot: di
         tagsets = pd.Series([access_class(ways[w].get("tags", {})) for w in fw if w in ways]).value_counts()
         gn = gates[gates["component"] == fid]
         misses = nm[nm["fragment"] == fid]
-        link = cor[cor["fragment"] == fid].iloc[0].to_dict() if len(cor) and (cor["fragment"] == fid).any() else None
+        link = (
+            cor[cor["fragment"] == fid].iloc[0].to_dict()
+            if len(cor) and (cor["fragment"] == fid).any()
+            else None
+        )
         rows.append(
             {
                 "fragment": fid, "length_km": r["length_km"], "component_class": r["component_class"],
@@ -1073,7 +1147,9 @@ def gap_investigation(s, G_all, comps, inv, nm, ways, nodes, gates, snapshot: di
 def _md(df: pd.DataFrame, index: bool = True) -> str:
     """Markdown table without the optional `tabulate` dependency."""
     d = df.reset_index() if index else df
-    cells = [[str(c) for c in d.columns]] + [["" if pd.isna(v) else str(v) for v in r] for r in d.itertuples(index=False)]
+    cells = [[str(c) for c in d.columns]] + [
+        ["" if pd.isna(v) else str(v) for v in r] for r in d.itertuples(index=False)
+    ]
     cells = [[c.replace("|", "/").replace("\n", " ") for c in r] for r in cells]
     lines = ["| " + " | ".join(cells[0]) + " |", "|" + "---|" * len(cells[0])]
     return "\n".join(lines + ["| " + " | ".join(r) + " |" for r in cells[1:]])
@@ -1114,7 +1190,9 @@ def snapshot_readme_lines(snapshot: dict | None, gap: pd.DataFrame) -> list[str]
     return lines
 
 
-def write_readme(out, inv, summ, tr, by_b, excluded_delta, impact, gap, n_comp, snapshot: dict | None = None) -> None:
+def write_readme(
+    out, inv, summ, tr, by_b, excluded_delta, impact, gap, n_comp, snapshot: dict | None = None
+) -> None:
     pop = summ[summ["group"] == "_population"].set_index("approach")
     lines = [
         "# Milestone 04 component and access evidence (generated by `abot components`; nothing applied)",
@@ -1126,8 +1204,15 @@ def write_readme(out, inv, summ, tr, by_b, excluded_delta, impact, gap, n_comp, 
         "",
         "## Component classes",
         "",
-        _md(inv.groupby("component_class").agg(components=("fragment", "size"), km=("length_km", "sum"),
-            pop_attached_A3=("pop_attached_A3", "sum")).round(1)),  # fmt: skip
+        _md(
+            inv.groupby("component_class")
+            .agg(
+                components=("fragment", "size"),
+                km=("length_km", "sum"),
+                pop_attached_A3=("pop_attached_A3", "sum"),
+            )
+            .round(1)
+        ),  # fmt: skip
         "",
         "## Approaches (residents)",
         "",

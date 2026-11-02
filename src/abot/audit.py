@@ -375,7 +375,11 @@ class Audit:
             code = PROJECT_ROOT / "src" / "abot" / "components.py"
             problems = [
                 *(["older than the last accessibility build"] if built < stamp["accessibility"] else []),
-                *(["built with another configuration"] if info.get("config_sha256") != s.config_sha256 else []),
+                *(
+                    ["built with another configuration"]
+                    if info.get("config_sha256") != s.config_sha256
+                    else []
+                ),
                 *(
                     ["components.py changed after the layer was built"]
                     if code.exists() and datetime.fromtimestamp(code.stat().st_mtime).astimezone() > built
