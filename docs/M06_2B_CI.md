@@ -205,4 +205,18 @@ passes on GitHub's Ubuntu runners is known only after the first run on GitHub.
    covered.
 6. **The build has no data.** The CI build proves compilation, not a deployable site.
 7. **Floating minor versions.** `ubuntu-latest`, Python 3.13.x and Node 24.x float within their
-   lines. The lockfiles fix every package.
+   lines. The lockfiles fix every package. GitHub has announced that `ubuntu-latest` moves to
+   Ubuntu 26 from 2026-10-19.
+
+## 11. First run on GitHub (2026-11-02)
+
+Run 41376541056 on commit `a594551`:
+- **Dashboard job:** passed.
+- **Python job:** ruff and the dependency install passed. One test failed:
+  `test_m02b.py::test_audit_detects_stale_stage_order`.
+
+The test recorded two stages back to back, and the stamps have millisecond resolution. On the Linux
+runner both records fell in the same millisecond, so the "later" stage was not later. The audit was
+right and the test was racy. The test now sets the second stamp explicitly 1 s later, with the
+assertion unchanged (Documentation.md §10, "CI fix" entry). Whether the next run passes is known
+only after it runs on GitHub.

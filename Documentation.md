@@ -11,9 +11,10 @@ at the end**, newest first.
 - Licence: source code MIT ([LICENSE](LICENSE), since Milestone 06.1); data keeps its own licences
   ([docs/ATTRIBUTION.md](docs/ATTRIBUTION.md))
 - Study area: Iloilo City, Iloilo, Western Visayas (Region VI), Philippines
-- Current state: **Milestone 06.2B, uncommitted** (2026-11-02): GitHub Actions CI
+- Current state: **Milestone 06.2B** (commit `a594551`, 2026-11-02): GitHub Actions CI
   ([docs/M06_2B_CI.md](docs/M06_2B_CI.md)) checks the Python package and the dashboard on every push
-  and pull request to `main`, without `data/`. Before that, **Milestone 06.2A follow-up** (commit
+  and pull request to `main`, without `data/`. Its first run failed one timing-sensitive test on
+  Linux; the test fix is **uncommitted**. Before that, **Milestone 06.2A follow-up** (commit
   `86d9797`): archive-aware validation.
   Without any `data/archive/` the archive-dependent checks are NOT PERFORMED, never passed, and a
   fresh clone can export; they stay strict whenever archives exist (contract `abot-dashboard`
@@ -830,7 +831,31 @@ uv run pytest           # offline unit tests
 Newest entries first. Each entry records the date, the milestone, what changed and why, files
 affected, and any effect on results. Future work is appended here as it is done.
 
-### 2026-11-02 — Milestone 06.2B: GitHub Actions continuous integration (uncommitted)
+### 2026-11-02 — CI fix: deterministic stage order in the staleness test (uncommitted)
+
+**Why:** The first GitHub Actions run (commit `a594551`, run 41376541056) failed in one test,
+`tests/test_m02b.py::test_audit_detects_stale_stage_order`, with `assert 'PASS' == 'FAIL'`. The
+test called `qa.record_stage` for `accessibility` and then `population`, back to back. Stage stamps
+have millisecond resolution, and on the fast Linux runner both calls fell in the same millisecond.
+The stamps were therefore equal, `population` was not later than `accessibility`, and the audit
+correctly reported PASS. On Windows the calls had always landed in different milliseconds, so the
+race never showed locally. The dashboard job, ruff and the other 242 run tests passed.
+
+**Changed:**
+- `tests/test_m02b.py`: after the two `record_stage` calls, the test sets `population`'s
+  `completed_utc` explicitly to 1 s after `accessibility`'s, then runs the audit. The assertion is
+  unchanged (FAIL, with `abot build --only accessibility` in the action). Added the `datetime`
+  import.
+
+**Not changed:** `src/abot/audit.py` and `src/abot/qa.py`. The audit's strict `>` comparison is
+correct: an upstream stage that finished at the same instant is not "rebuilt after".
+
+**Verified (2026-11-02, Windows):** `ruff check .` passed; `ruff format` reports the file already
+formatted; pytest 250 passed. Not yet verified on GitHub: that needs the next push.
+
+**Effect on results:** none (test-only change).
+
+### 2026-11-02 — Milestone 06.2B: GitHub Actions continuous integration (commit `a594551`)
 
 **Why:** The audit (H3) found no CI. The tests ran only on the author's machine, and nothing showed
 a reviewer that they pass. Full documentation: [docs/M06_2B_CI.md](docs/M06_2B_CI.md).
@@ -865,6 +890,8 @@ a reviewer that they pass. Full documentation: [docs/M06_2B_CI.md](docs/M06_2B_C
   Vitest 82 passed; build OK.
 - **Not verified:** GitHub Actions has not been run yet. The first run on GitHub will show whether
   it passes on the Linux runner.
+- **First GitHub run (after commit):** the dashboard job passed. The Python job failed in one
+  timing-sensitive test (see the CI fix entry above).
 
 **Effect on results:** none. No application, analytical or test code changed, the bundle is
 untouched, and no dependency was added.

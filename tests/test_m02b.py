@@ -3,6 +3,7 @@ total-population denominators, drive network-speed sensitivity, `abot audit` and
 Offline; synthetic geometry, real configuration rules."""
 
 import json
+from datetime import datetime, timedelta
 
 import geopandas as gpd
 import networkx as nx
@@ -379,6 +380,12 @@ def test_audit_detects_stale_stage_order(tmp_path):
     s.ensure_dirs()
     qa.record_stage(s, "accessibility")
     qa.record_stage(s, "population")  # population rebuilt after accessibility
+    # Stamps have millisecond resolution, so two back-to-back records can tie (seen on the Linux CI
+    # runner). Set population's stamp explicitly to 1 s after accessibility to make the order certain.
+    meta = qa.read_run_meta(s)
+    acc = datetime.fromisoformat(meta["accessibility"]["completed_utc"])
+    meta["population"]["completed_utc"] = (acc + timedelta(seconds=1)).isoformat(timespec="milliseconds")
+    qa.run_meta_path(s).write_text(json.dumps(meta, indent=2), encoding="utf-8")
     a = audit.Audit(s, DEFAULT_CONFIG, hashes=False)
     a.check_staleness()
     order = {f.check: f for f in a.findings}["order: accessibility"]
