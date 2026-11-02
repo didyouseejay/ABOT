@@ -1,9 +1,9 @@
 /**
  * About (#/about): what the dashboard shows and how, in everyday words; what to keep in mind; who made
- * it; and the way into the pages for researchers (methodology, data quality, network evidence).
+ * it; data credits and licences; and the way into the pages for researchers (methodology, data quality, network evidence).
  */
 import { Glyph, type GlyphName } from "../components/glyphs.tsx";
-import { PROJECT } from "../components/layout/Brand.tsx";
+import { DATA_LICENCE, PROJECT } from "../components/layout/Brand.tsx";
 import { PageHeader } from "../components/ui.tsx";
 import type { LoadedBundle } from "../data/loadBundle.ts";
 import { fixed, formatUtc } from "../model/format.ts";
@@ -38,7 +38,7 @@ export function AboutPage({ bundle }: { bundle: LoadedBundle }) {
           <li>
             <Glyph name="street" />
             <span>
-              <b>Explore the map</b> with a street map or satellite background, and see which barangays are close to {m.indicator_groups.slice(0, 3).map((g) => servicePlural(g.id)).join(", ")} and more.
+              <b>Explore the map</b> with or without a street map background, and see which barangays are close to {m.indicator_groups.slice(0, 3).map((g) => servicePlural(g.id)).join(", ")} and more.
             </span>
           </li>
           <li>
@@ -110,11 +110,35 @@ export function AboutPage({ bundle }: { bundle: LoadedBundle }) {
       <section className="section">
         <h2>Who made this</h2>
         <p>
-          {PROJECT.name} ({PROJECT.fullName}) is a research project of {PROJECT.institution}. It is a read-only prototype: nothing you do here is saved or sent anywhere.
+          {PROJECT.name} ({PROJECT.fullName}) is an independent personal portfolio project by {PROJECT.author}. It is not affiliated with or endorsed by any university, government agency or other institution. It is a read-only prototype: nothing you do here is saved or sent anywhere.
         </p>
         <p className="muted small">
-          Data prepared {formatUtc(m.generated_utc)} · {fixed(bundle.city.population.total, 0)} residents (2020 census) · Map data © OpenStreetMap contributors · Boundaries: OCHA COD-AB · Satellite imagery © Esri and partners
+          Data prepared {formatUtc(m.generated_utc)} · {fixed(bundle.city.population.total, 0)} residents (2020 census)
         </p>
+      </section>
+      <section className="section" aria-labelledby="licence-h">
+        <h2 id="licence-h">Data sources and licences</h2>
+        <ul className="tips tips--plain">
+          <li>
+            <b>Streets and facilities:</b> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>, available under the Open Database License (ODbL) 1.0.
+          </li>
+          <li>
+            <b>Barangay boundaries:</b> OCHA / NAMRIA / PSA, Common Operational Datasets – Administrative Boundaries (COD-AB), CC BY-IGO.
+          </li>
+          <li>
+            <b>Barangay population:</b> Philippine Statistics Authority (PSA), 2020 Census of Population and Housing, CC BY.
+          </li>
+          <li>
+            <b>100 m population grid:</b> <a href="https://www.worldpop.org">WorldPop</a> (www.worldpop.org), School of Geography and Environmental Science, University of Southampton; constrained population counts R2025A (DOI 10.5258/SOTON/WP00839), CC BY 4.0.
+          </li>
+          <li>
+            <b>Street map background:</b> tiles © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>, served by the OpenStreetMap Foundation.
+          </li>
+        </ul>
+        <p>
+          <b>Dataset licence.</b> This dashboard's dataset contains information from OpenStreetMap and is a derivative database: {DATA_LICENCE.notice} (<a href={DATA_LICENCE.url}>licence text</a>). Copies of the dataset are published with the <a href={DATA_LICENCE.releases}>project's releases</a>. Data from the other sources above keeps its own licence and credit.
+        </p>
+        <p className="muted small">The dashboard code is MIT-licensed. That licence covers the code only, not the datasets above.</p>
       </section>
       <section className="section" aria-labelledby="research-h">
         <h2 id="research-h">For researchers</h2>

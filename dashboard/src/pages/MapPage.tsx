@@ -1,5 +1,5 @@
 /**
- * Map (#/map): Leaflet map of Iloilo City with a choice of background (street map, satellite or none),
+ * Map (#/map): Leaflet map of Iloilo City with a choice of background (street map or none),
  * barangays coloured by the selected service, facilities of that service, and an optional 100 m grid.
  * A side panel holds the choices, a legend explains the colours, and clicking a barangay opens its
  * details. Walking is the primary (A3) result and "by car" is A1 driving, each with its own breaks.
@@ -142,7 +142,7 @@ function Controls({ b, list, o, setLyr }: { b: LoadedBundle; list: Barangay[]; o
           <input type="range" id="ly-op" min="0.2" max="1" step="0.05" value={o.op} onChange={(e) => set({ op: e.target.value })} />
           <span className="num">{Math.round(o.op * 100)}%</span>
         </div>
-        <span className="check__hint">Lower it to see the background map or satellite image through the colors.</span>
+        <span className="check__hint">Lower it to see the background map through the colors.</span>
       </div>
       <label className="field" htmlFor="mc-find">
         <span className="field__label">Find a barangay</span>
@@ -292,12 +292,11 @@ export function MapPage({ bundle }: { bundle: LoadedBundle }) {
     if (!handle) return;
     const { L, map, layers } = handle;
     const lookup = new Map((list ?? []).map((x) => [x.code, x]));
-    const onImage = basemap === "satellite";
     layers.choro.setStyle((f) => {
       const x = lookup.get((f?.properties as { c: string }).c);
       if (!x) return { stroke: false, fill: false };
       const sel = o.b === x.code;
-      const line = sel ? { color: "#0f172a", weight: 3.5, opacity: 1 } : { color: onImage ? "#ffffff" : "#334155", weight: o.choro ? 0.7 : 1.1, opacity: o.choro ? 0.9 : 0.75 };
+      const line = sel ? { color: "#0f172a", weight: 3.5, opacity: 1 } : { color: "#334155", weight: o.choro ? 0.7 : 1.1, opacity: o.choro ? 0.9 : 0.75 };
       if (!o.choro) return { ...line, fill: true, fillOpacity: 0, stroke: true };
       const c = choroColor(value(x, s), s);
       return { ...line, stroke: true, fill: true, fillColor: c ?? ramps().none, fillOpacity: c ? o.op : o.op * 0.7 };
@@ -315,7 +314,7 @@ export function MapPage({ bundle }: { bundle: LoadedBundle }) {
     }
     drawFacilities(L as L, layers.facs as unknown as LeafletNS.LayerGroup, visibleFacs, (f) => ramps().fac[f.category] ?? "#0f172a", null);
     // restyled from the address (s, p) and the background; the other inputs derive from them
-  }, [handle, s, p, list, basemap]);
+  }, [handle, s, p, list]);
 
   // Zoom to a barangay chosen from the finder or a link.
   useEffect(() => {

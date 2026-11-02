@@ -115,7 +115,7 @@ export function MethodsPage({ bundle }: { bundle: LoadedBundle }) {
                 </code>
                 ). Travel times are <strong>modelled</strong> on the mapped OpenStreetMap network to the nearest <strong>mapped</strong> facility: geographic proximity, not service level, capacity or observed travel.
               </p>
-              <p>It accompanies a thesis at {PROJECT.institution} and is meant for city planners, the thesis committee and researchers reading the paper.</p>
+              <p>It is an independent personal portfolio project by {PROJECT.author}, meant for city planners, researchers and anyone interested in access to services in the city.</p>
             </div>
           </Panel>
         </div>
@@ -273,12 +273,12 @@ export function MethodsPage({ bundle }: { bundle: LoadedBundle }) {
           </Panel>
           <div style={{ height: "var(--space-4)" }} />
           <Panel id="cite" title="How to cite">
-            <pre className="citation">{`[Author surname, initials] (${m.generated_utc.slice(0, 4)}). ABOT: ${PROJECT.fullName}.
+            <pre className="citation">{`Coopera, C. J. L. (${m.generated_utc.slice(0, 4)}). ABOT: ${PROJECT.fullName}.
 Accessibility to essential public facilities in Iloilo City, Philippines
 [Dashboard, data contract ${m.contract} v${m.contract_version}, generated
-${formatUtc(m.generated_utc)}, code ${commit}]. ${PROJECT.institution}.`}</pre>
+${formatUtc(m.generated_utc)}, code ${commit}]. Independent project.`}</pre>
             <p className="small muted" style={{ margin: "var(--space-2) 0 0" }}>
-              Bracketed fields are filled from the thesis record. OSM-derived data: © OpenStreetMap contributors, ODbL 1.0.
+              OSM-derived data: © OpenStreetMap contributors; the dataset is available under the ODbL 1.0. Population: PSA 2020 census and WorldPop (CC BY 4.0).
             </p>
           </Panel>
         </div>

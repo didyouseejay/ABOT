@@ -96,8 +96,7 @@ export function FacilitiesPage({ bundle }: { bundle: LoadedBundle }) {
   useBasemapLayer(handle, basemap);
   useEffect(() => {
     if (!handle) return;
-    const onImage = basemap === "satellite";
-    handle.layers.outlines.setStyle({ color: onImage ? "#ffffff" : "#334155", weight: 0.8, opacity: 0.7, fillColor: "#ffffff", fillOpacity: basemap === "none" ? 0.6 : 0 });
+    handle.layers.outlines.setStyle({ color: "#334155", weight: 0.8, opacity: 0.7, fillColor: "#ffffff", fillOpacity: basemap === "none" ? 0.6 : 0 });
     drawFacilities(handle.L as L, handle.layers.facs, list, (f) => ramps().fac[f.category] ?? "#0f172a", p["f"] ?? null, (f) => live.current({ f: f.fid_key }));
     // redrawn from the address (p) and the background; the list derives from the address
   }, [handle, p, basemap]);

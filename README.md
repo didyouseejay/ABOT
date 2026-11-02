@@ -304,10 +304,11 @@ No source data is stored in this repository. `abot fetch` downloads it, and
 | Administrative boundaries (COD-AB v03) | [OCHA / HDX](https://data.humdata.org/dataset/cod-ab-phl), from NAMRIA and PSA | CC BY-IGO |
 | 2020 Census population by barangay | [PSA via HDX](https://data.humdata.org/dataset/popn-single-year-age-sex-and-barangay-census-2020) | CC BY |
 | Population counts R2025A, 100 m | [WorldPop](https://hub.worldpop.org/) | CC BY 4.0 |
-| Map backgrounds (view time only) | OpenStreetMap tile servers; Esri World Imagery | OSM Tile Usage Policy; Esri terms of use |
+| Street-map background (view time only) | OpenStreetMap tile servers | OSM Tile Usage Policy |
 
 - ABOT's outputs that contain OpenStreetMap data, including the dashboard bundle, are derivative
   databases. **If you share them publicly, you must do so under the ODbL**, with attribution.
+  The published dataset's ODbL notice is in [LICENSE-DATA.md](LICENSE-DATA.md).
 - Screenshots and maps must credit "© OpenStreetMap contributors".
 
 [docs/ATTRIBUTION.md](docs/ATTRIBUTION.md) lists every data source, tile provider and third-party
@@ -373,7 +374,8 @@ Coopera.
 
 The MIT License covers the code only:
 - Data downloaded or derived by the pipeline keeps its own licence: ODbL 1.0 for
-  OpenStreetMap-derived outputs, Creative Commons for the other sources.
+  OpenStreetMap-derived outputs ([LICENSE-DATA.md](LICENSE-DATA.md)), Creative Commons for the other
+  sources.
 - Third-party libraries, fonts and map tiles keep their own licences.
 
 See [docs/ATTRIBUTION.md](docs/ATTRIBUTION.md).

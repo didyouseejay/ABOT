@@ -7,11 +7,18 @@ place. **Every change or addition to the project is logged in the [Change log](#
 at the end**, newest first.
 
 - Repository: `abot` (Python package `abot`, v0.1.0)
-- Author: Carl John L. Coopera (GitHub: didyouseejay; carljohn.coopera@wvsu.edu.ph), West Visayas State University
-- Licence: source code MIT ([LICENSE](LICENSE), since Milestone 06.1); data keeps its own licences
+- Author: Carl John L. Coopera (GitHub: didyouseejay). ABOT is an independent personal portfolio
+  project, not affiliated with or endorsed by any institution
+- Licence: source code MIT ([LICENSE](LICENSE), since Milestone 06.1); the published dataset is
+  ODbL 1.0 ([LICENSE-DATA.md](LICENSE-DATA.md), since M06.3); the source data keeps its own licences
   ([docs/ATTRIBUTION.md](docs/ATTRIBUTION.md))
 - Study area: Iloilo City, Iloilo, Western Visayas (Region VI), Philippines
-- Current state: **Milestone 06.2C** (2026-11-02, uncommitted): code-quality enforcement
+- Current state: **Milestone 06.3 Phase 0** (2026-11-03, uncommitted): identity and licensing
+  corrections before public deployment. Institutional branding was removed from the dashboard and
+  project metadata, and ABOT is now attributed as an independent personal portfolio project. An ODbL
+  1.0 notice ([LICENSE-DATA.md](LICENSE-DATA.md)) appears in the dashboard footer and About page, and
+  About credits WorldPop. The Esri satellite background was removed. No analytical code path, result,
+  bundle or contract version changed. Before that, **Milestone 06.2C** (commits `68e67b8`–`dcc8b8b`): code-quality enforcement
   ([docs/M06_2C_CODE_QUALITY.md](docs/M06_2C_CODE_QUALITY.md)). The eight unformatted Python files
   were formatted, dead dashboard code was removed and `esc()` deduplicated, and Pyright (non-strict)
   was added. CI now also runs `ruff format --check` and `pyright`. No analytical code path, result,
@@ -836,7 +843,49 @@ uv run pytest           # offline unit tests
 Newest entries first. Each entry records the date, the milestone, what changed and why, files
 affected, and any effect on results. Future work is appended here as it is done.
 
-### 2026-11-02 — Milestone 06.2C: code-quality enforcement and technical cleanup (uncommitted)
+### 2026-11-03 — Milestone 06.3 Phase 0: identity and licensing corrections (uncommitted)
+
+**Why:** M06.3 will deploy the dashboard publicly (Vercel) and distribute the dataset through GitHub
+Releases. Before that, three things had to be fixed:
+- The public materials presented ABOT as a West Visayas State University research project, framed
+  as a thesis, with a university email. ABOT is an independent personal portfolio project.
+- The published dataset needed a clear ODbL 1.0 notice, and the About page lacked the WorldPop
+  credit.
+- The Esri World Imagery background's terms were not cleared for a public deployment.
+
+**Changed:**
+- Identity: `PROJECT.institution` was replaced by `PROJECT.author` and `PROJECT.attribution`
+  (`dashboard/src/components/layout/Brand.tsx`). The footer, About ("Who made this") and
+  Methodology ("What ABOT is" and "How to cite") now name the independent author, with no thesis,
+  committee or institutional wording. The citation author is filled in, and its "[Author surname,
+  initials]" placeholder and "thesis record" note are gone. `pyproject.toml` lists the author
+  without the university email. This file's header was updated in the same way.
+- Licensing: new `DATA_LICENCE` constant (ODbL 1.0 URL and the releases page) and a new root
+  `LICENSE-DATA.md`. The footer now always shows "Map data © OpenStreetMap contributors · Dataset:
+  ODbL 1.0 (downloads) · Code: MIT". About has a new "Data sources and licences" section: OSM
+  (ODbL 1.0), COD-AB (CC BY-IGO), PSA 2020 census (CC BY), WorldPop R2025A (CC BY 4.0, DOI) and
+  the street-map tiles. It also carries the dataset's ODbL notice, links to the licence and the
+  releases, and says that the MIT licence covers the code only. The Leaflet attribution now links
+  OpenStreetMap's copyright page and credits PSA and WorldPop.
+- Esri: the `satellite` basemap was removed. That means its tile URLs, the Esri place-name pane,
+  the `satellite` glyph, its CSS rule and the white-outline styling used on imagery. The map,
+  facilities and network maps offer "Street map" or "No background". A stored `satellite` choice
+  falls back to the street map. No other imagery provider was added.
+- Docs: README, `docs/ARCHITECTURE.md` and `docs/ATTRIBUTION.md` were updated to match.
+- Tests (`dashboard/test/shell.test.ts`, +4): no page contains institutional or thesis wording,
+  About credits the author and every source (ODbL, WorldPop, PSA, COD-AB, OSM), the footer carries
+  the OSM credit and the ODbL notice, and only `street` and `none` are offered, with no satellite,
+  Esri or ArcGIS text on any map page.
+
+**Not changed:** the pipeline, the bundle (not re-exported), the data contract, and Git history.
+Facility names from OpenStreetMap that contain "WVSU" are data and stay. The Python review and
+validation maps (`src/abot/review.py`, `validation.py`) still use Esri imagery, but only as local
+inspection outputs. Historical milestone documents and earlier change-log entries keep their
+original wording as a record.
+
+**Effect on results:** none.
+
+### 2026-11-02 — Milestone 06.2C: code-quality enforcement and technical cleanup (commits `68e67b8`–`dcc8b8b`)
 
 **Why:** The audit's remaining code-quality findings: 8 unformatted Python files (L2), dead
 frontend code (L1), a duplicated `esc()` (L3) and no Python type checker (M8). CI did not enforce

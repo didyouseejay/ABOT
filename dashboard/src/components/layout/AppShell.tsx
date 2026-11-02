@@ -18,7 +18,7 @@ import { type View, ViewContext } from "../../view.tsx";
 import { NoteRegistry, NotesFooter, NotesProvider } from "../notes.tsx";
 import { PageHeader } from "../ui.tsx";
 import { FatalState, LoadingState } from "../states/States.tsx";
-import { Mark, PROJECT } from "./Brand.tsx";
+import { DATA_LICENCE, Mark, PROJECT } from "./Brand.tsx";
 import { DataAlert } from "./DataAlert.tsx";
 import { MAIN_ID } from "./ids.ts";
 import { TopBar } from "./TopBar.tsx";
@@ -67,7 +67,7 @@ function Footer({ view, state }: { view: View; state: BundleState }) {
               {PROJECT.name} · {PROJECT.tagline}
             </p>
             <p className="footer__sub">
-              {PROJECT.fullName}. A research project of {PROJECT.institution}.
+              {PROJECT.fullName}. {PROJECT.attribution}
             </p>
           </div>
         </div>
@@ -79,7 +79,10 @@ function Footer({ view, state }: { view: View; state: BundleState }) {
             </a>
           ))}
         </nav>
-        {state.status === "ready" && <p className="footer__meta">Data prepared {formatUtc(state.bundle.manifest.generated_utc).slice(0, 10)} · Map data © OpenStreetMap contributors</p>}
+        <p className="footer__meta">
+          {state.status === "ready" && <>Data prepared {formatUtc(state.bundle.manifest.generated_utc).slice(0, 10)} · </>}
+          Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors · Dataset: <a href={DATA_LICENCE.url}>{DATA_LICENCE.name}</a> (<a href={DATA_LICENCE.releases}>downloads</a>) · Code: MIT
+        </p>
       </div>
     </footer>
   );

@@ -7,6 +7,7 @@
 import { describe, expect, it } from "vitest";
 import type { BundleState } from "../src/data/BundleContext.tsx";
 import { type LoadedBundle, loadBundle } from "../src/data/loadBundle.ts";
+import { BASEMAPS } from "../src/map/leaflet.ts";
 import { bundleStatusItems, shellStatusItems } from "../src/model/shell.ts";
 import { isUnknownHash, routeFromHash } from "../src/router.ts";
 import { DEFAULT_ROUTE, ROUTES, ROUTE_IDS, routeDef } from "../src/routes.ts";
@@ -73,7 +74,7 @@ describe("shell structure and top navigation", () => {
     const html = render("overview", await ready());
     expect(html).toContain("Geospatial Accessibility and Public Infrastructure Intelligence System");
     expect(html).toContain("Bringing essential services within reach.");
-    expect(html).toContain("West Visayas State University");
+    expect(html).toContain("An independent personal portfolio project by Carl John L. Coopera.");
   });
   it("exposes the menu-panel state on the menu button", async () => {
     const s = await ready();
@@ -89,6 +90,50 @@ describe("shell structure and top navigation", () => {
   });
   it("has no footer on the full-height map", async () => {
     expect(render("map", await ready())).not.toContain('<footer class="footer">');
+  });
+});
+
+describe("identity, data licences and attribution", () => {
+  // Institutional framing that must not appear in the dashboard's own text. Facility names from
+  // OpenStreetMap (some contain "WVSU") are data, not branding; the fixture bundle has none.
+  const INSTITUTIONAL = [/West Visayas/i, /\bWVSU\b/i, /thesis/i, /committee/i, /research project of/i, /\.edu\b/i];
+  it("names no institution or thesis on any page", async () => {
+    const s = await ready();
+    for (const r of ROUTES) {
+      const html = render(r.id, s);
+      for (const re of INSTITUTIONAL) expect(re.test(html), `${r.id}: ${re}`).toBe(false);
+    }
+  });
+  it("credits the independent author and every data source on About", async () => {
+    const html = render("about", await ready());
+    expect(html).toContain("independent personal portfolio project by Carl John L. Coopera");
+    expect(html).toContain("Open Database License (ODbL) 1.0");
+    expect(html).toContain('href="https://opendatacommons.org/licenses/odbl/1-0/"');
+    expect(html).toContain('href="https://github.com/didyouseejay/ABOT/releases"');
+    expect(html).toContain("WorldPop");
+    expect(html).toContain("CC BY 4.0");
+    expect(html).toContain("Philippine Statistics Authority (PSA)");
+    expect(html).toContain("COD-AB");
+    expect(html).toContain("© <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap contributors</a>");
+    expect(html).toContain("covers the code only");
+  });
+  it("shows the OpenStreetMap credit and the ODbL notice in the footer", async () => {
+    const html = render("overview", await ready());
+    const footer = html.slice(html.indexOf('<footer class="footer">'));
+    expect(footer).toContain('Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors');
+    expect(footer).toMatch(/Dataset: <a href="https:\/\/opendatacommons.org\/licenses\/odbl\/1-0\/">ODbL 1.0<\/a>/);
+    expect(footer).toContain('href="https://github.com/didyouseejay/ABOT/releases"');
+  });
+  it("offers no satellite imagery: street map or none", async () => {
+    expect(BASEMAPS.map((b) => b.id)).toEqual(["street", "none"]);
+    const s = await ready();
+    for (const r of ["map", "facilities", "network", "about"]) {
+      const html = render(r, s);
+      expect(/satellite|esri|arcgis/i.test(html), r).toBe(false);
+    }
+    const map = render("map", s);
+    expect(map).toContain("Street map");
+    expect(map).toContain("No background");
   });
 });
 

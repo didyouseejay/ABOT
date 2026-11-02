@@ -57,7 +57,7 @@ flowchart LR
     UI["React pages + Leaflet maps"]
   end
 
-  TILES["Tile servers at view time<br/>OSM street map · Esri imagery"]
+  TILES["Tile server at view time<br/>OSM street map"]
 
   COD & PSA & WP --> FETCH
   FETCH --> B --> P --> O --> A
@@ -252,7 +252,8 @@ about the three walk-network gaps. It feeds only the gap evidence, never an indi
     wrapper. Charts are hand-built SVG and HTML, with no chart library.
   - Routing uses the URL hash (`#/map`) with relative asset paths, so the build works from any
     folder of any static host.
-- **Background maps** (optional) come from the OpenStreetMap and Esri tile servers at view time.
+- **Background map** (optional): the OpenStreetMap street map, loaded from the OSM tile servers at
+  view time. Satellite imagery (Esri) was removed in M06.3 for licensing.
   "No background" contacts no server.
 
 ## 10. Reproducibility and provenance
@@ -298,10 +299,10 @@ Such a bundle does not show that historical results were reproduced
    dates.
 4. **No published demo yet.** `data/` is git-ignored, so a fresh clone builds a dashboard that
    reports "no bundle" until the pipeline has been run.
-5. **Third-party tiles.** The background maps depend on the OSM and Esri tile servers and their
-   usage policies.
+5. **Third-party tiles.** The street-map background depends on the OSM tile servers and their
+   usage policy.
 6. **ODbL.** The bundle is a derivative of OpenStreetMap data. Publishing it means publishing it
-   under the ODbL ([ATTRIBUTION.md](ATTRIBUTION.md)).
+   under the ODbL ([ATTRIBUTION.md](ATTRIBUTION.md), [LICENSE-DATA.md](../LICENSE-DATA.md)).
 
 ## 12. Why there is no API server or database
 

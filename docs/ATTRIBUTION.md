@@ -1,5 +1,8 @@
 # Data and third-party attribution
 
+ABOT is an independent personal portfolio project by Carl John L. Coopera. It is not affiliated with
+or endorsed by any university, agency or data provider.
+
 ABOT's original source code is released under the [MIT License](../LICENSE). That licence does
 **not** extend to the data the pipeline downloads or derives, nor to third-party software, fonts or
 map tiles. Each keeps its own terms, summarised below. Library licences were read from the installed
@@ -26,7 +29,9 @@ data again, and `data/raw/manifest.json` records each file's URL, licence and SH
   travel times computed on the OSM network).
 - **If you publish such a database** (for example, by deploying the dashboard with its bundle, or
   attaching the bundle to a release), it must be offered under the ODbL. It must also keep the
-  attribution and state that it contains OpenStreetMap data.
+  attribution and state that it contains OpenStreetMap data. ABOT's own notice for its published
+  dataset is [LICENSE-DATA.md](../LICENSE-DATA.md). The dashboard shows it in the footer and on the
+  About page, with a link to the release downloads.
 - Maps, figures and screenshots made from it are **Produced Works**. They need the credit
   "© OpenStreetMap contributors", but not the ODbL itself. The screenshots in
   [assets/screenshots/](assets/screenshots/) show this credit in the map attribution.
@@ -40,18 +45,24 @@ found for any of them ([DATA_SOURCES.md](DATA_SOURCES.md) §4).
 
 ## 2. Map backgrounds in the dashboard
 
-The dashboard loads background tiles directly from third-party servers at view time. No tiles are
+The dashboard loads background tiles directly from a third-party server at view time. No tiles are
 stored in the repository or the bundle.
 
 | Background | Server | Credit shown in the map | Terms |
 |---|---|---|---|
 | Street map | `tile.openstreetmap.org` | "Street map © OpenStreetMap contributors" | [OSM Tile Usage Policy](https://operations.osmfoundation.org/policies/tiles/): suitable for light use such as a portfolio demo; heavy traffic needs another tile provider |
-| Satellite | Esri World Imagery (`server.arcgisonline.com`) | "Imagery © Esri, Maxar, Earthstar Geographics, and the GIS User Community" | Esri's terms of use for ArcGIS Online basemaps apply. Check them before any commercial or high-traffic deployment |
-| Satellite labels | Esri World Boundaries and Places | Covered by the Esri credit above | As above |
 
-The map also always shows the data credit "Data © OpenStreetMap contributors (ODbL) · boundaries
-OCHA COD-AB" (`dashboard/src/map/leaflet.ts`). With "No background" selected, no tile server is
-contacted.
+The Esri World Imagery "Satellite" background (and its Esri place-name overlay), offered since
+M05.3, was **removed in M06.3**. Its terms for a public deployment were not cleared. No other imagery
+provider replaces it. A browser that had "Satellite" saved falls back to the street map.
+
+The map also always shows the data credit "Data © OpenStreetMap contributors (ODbL 1.0) ·
+boundaries OCHA COD-AB · population PSA, WorldPop" (`dashboard/src/map/leaflet.ts`). With "No
+background" selected, no tile server is contacted.
+
+The Python pipeline's local review and validation maps (`src/abot/review.py`, `validation.py`) still
+offer an Esri imagery layer. They are generated for local inspection only and are not part of the
+public dashboard.
 
 ## 3. Python libraries (runtime)
 

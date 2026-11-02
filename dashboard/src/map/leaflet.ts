@@ -2,8 +2,8 @@
  * Leaflet, loaded on first use (it needs a browser window, so it is never imported at module load:
  * pages still render to static HTML in tests), and the background maps.
  *
- * Background maps (M05.3): a street map (the standard OpenStreetMap tiles), satellite imagery (Esri
- * World Imagery, with Esri place names on top) or none. These are the only requests the dashboard makes
+ * Background maps (M05.3; satellite imagery removed in M06.3 for licensing): a street map (the
+ * standard OpenStreetMap tiles) or none. The street tiles are the only requests the dashboard makes
  * outside its own bundle, and only while a map with that background is on screen; "No background"
  * makes none. The choice is remembered in the browser (localStorage) and shared by every map.
  */
@@ -21,15 +21,14 @@ export function loadLeaflet(): Promise<L> {
   return pending;
 }
 
-export const ATTRIBUTION = "Data © OpenStreetMap contributors (ODbL) · boundaries OCHA COD-AB";
+export const ATTRIBUTION = 'Data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors (ODbL 1.0) · boundaries OCHA COD-AB · population PSA, WorldPop';
 
 // --- background maps ----------------------------------------------------------------------------
 
-export type BasemapId = "street" | "satellite" | "none";
+export type BasemapId = "street" | "none";
 
 export const BASEMAPS: readonly { id: BasemapId; label: string }[] = [
   { id: "street", label: "Street map" },
-  { id: "satellite", label: "Satellite" },
   { id: "none", label: "No background" },
 ];
 
@@ -37,14 +36,6 @@ const TILES = {
   street: {
     url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
     options: { maxZoom: 19, attribution: 'Street map © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' },
-  },
-  satellite: {
-    url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-    options: { maxZoom: 19, attribution: "Imagery © Esri, Maxar, Earthstar Geographics, and the GIS User Community" },
-  },
-  satelliteLabels: {
-    url: "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
-    options: { maxZoom: 19 },
   },
 } as const;
 
@@ -54,7 +45,8 @@ const DEFAULT_BASEMAP: BasemapId = "street";
 function stored(): BasemapId {
   try {
     const v = typeof localStorage === "undefined" ? null : localStorage.getItem(STORE_KEY);
-    return v === "street" || v === "satellite" || v === "none" ? v : DEFAULT_BASEMAP;
+    // a stored "satellite" (offered before M06.3) falls back to the street map
+    return v === "street" || v === "none" ? v : DEFAULT_BASEMAP;
   } catch {
     return DEFAULT_BASEMAP;
   }
@@ -74,22 +66,13 @@ export function useBasemapChoice(): [BasemapId, (b: BasemapId) => void] {
   return [bm, set];
 }
 
-/** Show the chosen background under the map's own layers; place names sit above the colours on satellite. */
+/** Show the chosen background under the map's own layers. */
 export function useBasemapLayer(handle: MapHandle<unknown> | null, id: BasemapId): void {
   useEffect(() => {
     if (!handle) return;
     const { L, map } = handle;
     const layers: LeafletNS.TileLayer[] = [];
     if (id === "street") layers.push(L.tileLayer(TILES.street.url, TILES.street.options));
-    if (id === "satellite") {
-      if (!map.getPane("labels")) {
-        const pane = map.createPane("labels");
-        pane.style.zIndex = "450";
-        pane.style.pointerEvents = "none";
-      }
-      layers.push(L.tileLayer(TILES.satellite.url, TILES.satellite.options));
-      layers.push(L.tileLayer(TILES.satelliteLabels.url, { ...TILES.satelliteLabels.options, pane: "labels" }));
-    }
     for (const l of layers) l.addTo(map);
     map.getContainer().dataset["basemap"] = id;
     return () => {

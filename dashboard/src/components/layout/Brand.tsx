@@ -1,11 +1,20 @@
-/** Project identity: mark, short name and full name. */
+/** Project identity: mark, short name, full name and author; and the data licence notice. */
 export const PROJECT = {
   name: "ABOT",
   fullName: "Geospatial Accessibility and Public Infrastructure Intelligence System",
   tagline: "Bringing essential services within reach.",
   phrase: "Mapping communities. Measuring accessibility. Informing better infrastructure decisions.",
-  institution: "West Visayas State University",
+  author: "Carl John L. Coopera",
+  attribution: "An independent personal portfolio project by Carl John L. Coopera.",
   place: "Iloilo City",
+} as const;
+
+/** The published dataset (OpenStreetMap-derived) is a Derivative Database under the ODbL 1.0. */
+export const DATA_LICENCE = {
+  name: "ODbL 1.0",
+  url: "https://opendatacommons.org/licenses/odbl/1-0/",
+  releases: "https://github.com/didyouseejay/ABOT/releases",
+  notice: "the ABOT dataset is made available under the Open Database License (ODbL) 1.0",
 } as const;
 
 /** A location ring around a small network of nodes: places, links, reach. Decorative. */
