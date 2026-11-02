@@ -14,7 +14,7 @@ import type { CellProps, FacilityProps, Feature } from "../contract/types.ts";
 import type { LoadedBundle } from "../data/loadBundle.ts";
 import { BasemapSwitcher } from "../map/BasemapSwitcher.tsx";
 import { type L, type LMap, useBasemapChoice, useBasemapLayer, useLeaflet } from "../map/leaflet.ts";
-import { fixed } from "../model/format.ts";
+import { esc, fixed } from "../model/format.ts";
 import { facCatName, groupCategory, serviceName, servicePhrase, servicePlural } from "../model/labels.ts";
 import { brgyAvg, brgyShare, limitOf, minText, modeOf, pctText, statOf, verbOf } from "../model/plain.ts";
 import { DRIVE_BREAKS, DRIVE_LABELS, ramps, shareClass, TIME_BREAKS, TIME_LABELS, timeClass } from "../model/ramps.ts";
@@ -22,8 +22,6 @@ import type { Params, Shared } from "../model/view.ts";
 import { type Barangay, barangaysOf, boundsOf } from "../model/values.ts";
 import { useView } from "../view.tsx";
 import { BarangayPanel } from "./common.tsx";
-
-const esc = (s: unknown) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] as string);
 
 const SHARE_WORDS = ["Under 20%", "20–40%", "40–60%", "60–80%", "80% or more"];
 

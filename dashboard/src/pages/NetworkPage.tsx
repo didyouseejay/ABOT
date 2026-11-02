@@ -13,13 +13,11 @@ import type { Network } from "../contract/types.ts";
 import type { LoadedBundle } from "../data/loadBundle.ts";
 import { BasemapSwitcher } from "../map/BasemapSwitcher.tsx";
 import { useBasemapChoice, useBasemapLayer, useLeaflet } from "../map/leaflet.ts";
-import { fixed } from "../model/format.ts";
+import { esc, fixed } from "../model/format.ts";
 import { CATEGORIES, componentClassLabel, underscores } from "../model/labels.ts";
 import { barangaysOf, boundsOf } from "../model/values.ts";
 import { useNotes } from "../components/notes.tsx";
 import { useView } from "../view.tsx";
-
-const esc = (s: unknown) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] as string);
 
 const APPROACH: Record<string, [ReactNode, ReactNode]> = {
   A1_baseline: [<Scen k="a1" text="A1 · walk" />, <Role k="comparative" />],

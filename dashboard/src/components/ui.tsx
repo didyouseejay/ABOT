@@ -6,7 +6,7 @@
 import { type KeyboardEvent, type ReactNode, useRef } from "react";
 import { PAGE_TITLE_ID } from "./layout/ids.ts";
 import { fixed } from "../model/format.ts";
-import { categoryDef, groupLabel } from "../model/labels.ts";
+import { categoryDef } from "../model/labels.ts";
 import type { RelLevel } from "../model/values.ts";
 import { Chips } from "./notes.tsx";
 
@@ -30,9 +30,6 @@ export const Num = ({ v, d = 1, reason }: { v: V; d?: number; reason?: string })
 export const Int = ({ v, reason }: { v: V; reason?: string }) => (isNull(v) ? <NullValue reason={reason} /> : <>{fixed(Math.round(v), 0)}</>);
 export const Pct = ({ v, d = 1, reason }: { v: V; d?: number; reason?: string }) => (isNull(v) ? <NullValue reason={reason} /> : <>{fixed(v, d)}&#8239;%</>);
 export const Min = ({ v, d = 1, reason }: { v: V; d?: number; reason?: string }) => (isNull(v) ? <NullValue reason={reason} /> : <>{fixed(v, d)}&#8239;min</>);
-
-/** Text form for SVG labels and aria text (no element). */
-export const txt = (v: V, d = 1, unit = ""): string => (isNull(v) ? "no value" : `${fixed(v, d)}${unit}`);
 
 // --- icons (inline SVG set: 16×16, stroke 1.6) --------------------------------------------------
 
@@ -262,25 +259,6 @@ export function Seg({ id, label, options, value, onChange, cls = "", ariaLabel, 
   );
 }
 
-export function GroupSelect({ id, groups, value, onChange, label = "Indicator group", phrase }: { id: string; groups: readonly string[]; value: string; onChange: (g: string) => void; label?: string; phrase?: (g: string) => string }) {
-  return (
-    <label className="field" htmlFor={id}>
-      <span className="field__label">{label}</span>
-      <select className="select" id={id} value={value} onChange={(e) => onChange(e.target.value)}>
-        {groups.map((g) => (
-          <option key={g} value={g}>
-            {phrase ? phrase(g) : groupLabel(g)}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
-
-export function thresholdOptions(list: readonly number[]): SegOption[] {
-  return list.map((t) => [String(t), `≤ ${t} min`]);
-}
-
 export function Check({ id, checked, onChange, disabled, children }: { id: string; checked: boolean; onChange: (on: boolean) => void; disabled?: boolean; children: ReactNode }) {
   return (
     <label className="check" htmlFor={id}>
@@ -288,8 +266,4 @@ export function Check({ id, checked, onChange, disabled, children }: { id: strin
       <span>{children}</span>
     </label>
   );
-}
-
-export function printPage() {
-  window.print();
 }

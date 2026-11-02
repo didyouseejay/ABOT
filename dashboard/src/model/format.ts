@@ -40,6 +40,9 @@ export function isUnavailable(v: number | null | undefined): v is null | undefin
   return v === null || v === undefined;
 }
 
+/** HTML-escaped text for Leaflet tooltip strings (OpenStreetMap names and tags are untrusted input). */
+export const esc = (s: unknown) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] as string);
+
 /** ISO 8601 UTC timestamp shown with an explicit UTC marker. */
 export function formatUtc(iso: string): string {
   const d = new Date(iso);

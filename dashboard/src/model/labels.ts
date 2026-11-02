@@ -111,10 +111,3 @@ export const CONN_REASON: Record<string, string> = {
   barrier_blocked: "the straight connector would cross water or a wall",
   connected: "connected",
 };
-
-export const RELIABILITY_DIMENSIONS = [
-  ["overall", "Overall"],
-  ["population", "Population"],
-  ["network", "Network"],
-  ["facility_inventory", "Facility inventory"],
-] as const;

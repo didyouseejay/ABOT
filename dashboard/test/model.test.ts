@@ -3,7 +3,7 @@ import type { AuditBlock, Manifest } from "../src/contract/types.ts";
 import { checkCompatibility, parseVersion } from "../src/contract/version.ts";
 import { Catalog } from "../src/model/catalog.ts";
 import { distributionView, finalPointLabel } from "../src/model/distribution.ts";
-import { NULL_TEXT, formatValue, isUnavailable } from "../src/model/format.ts";
+import { NULL_TEXT, esc, formatValue, isUnavailable } from "../src/model/format.ts";
 import { auditView, gitView } from "../src/model/quality.ts";
 import { A3_CATEGORIES, A3_CATEGORY_NAMES, MODE_NAMES, ROLE_NAMES, SCENARIO_NAMES, findScenario } from "../src/model/scenarios.ts";
 import { routeFromHash } from "../src/router.ts";
@@ -23,6 +23,16 @@ describe("format: null is never zero", () => {
     expect(formatValue(0.02, "%")).toBe("0.02 %");
     expect(formatValue(448855.8, "residents")).toBe("448,855.8 residents");
     expect(formatValue(27.95, "minutes")).toBe("27.95 min");
+  });
+});
+
+describe("format: map tooltip text is HTML-escaped", () => {
+  it("escapes the five HTML metacharacters and shows null as empty", () => {
+    expect(esc(`<b class="x">Tom & Jerry's</b>`)).toBe("&lt;b class=&quot;x&quot;&gt;Tom &amp; Jerry&#39;s&lt;/b&gt;");
+    expect(esc("Plain name")).toBe("Plain name");
+    expect(esc(null)).toBe("");
+    expect(esc(undefined)).toBe("");
+    expect(esc(12)).toBe("12");
   });
 });
 

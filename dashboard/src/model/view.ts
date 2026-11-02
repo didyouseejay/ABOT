@@ -101,17 +101,3 @@ export function statKey(s: Shared): string {
   if (s.stat === "pct") return pctKey(s.m === "drive" ? s.dt : s.t);
   return s.stat === "mean" ? "mean_min" : "p90_min";
 }
-
-export function statLabel(s: Shared, short = false): string {
-  const t = s.m === "drive" ? s.dt : s.t;
-  if (s.stat === "pct") return short ? `% ≤ ${t} min` : `Share of all residents within ${t} min`;
-  if (s.stat === "mean") return short ? "Mean (min)" : "Mean time, connected residents";
-  return short ? "p90 (min)" : "90th-percentile time, connected residents";
-}
-
-/** Statement codes that must accompany the selected statistic. */
-export function statCodes(s: Shared): string[] {
-  const c = [s.stat === "pct" ? "DQ-SHARE-ALL" : "DQ-MEAN-CONN"];
-  if (s.m === "drive") c.push("DQ-DRIVE");
-  return c;
-}
