@@ -161,7 +161,7 @@ limits and the design reasoning.
 | Pipeline outputs | GeoPackage (pyogrio), CSV, Markdown QA report, folium quick-look map |
 | Data interface | Versioned JSON/GeoJSON bundle with SHA-256 manifest |
 | Dashboard | React 19, TypeScript 7 (strict), Vite 8, Leaflet 1.9 (used directly). Charts are hand-built SVG |
-| Tooling | uv (Python environment and lockfile), npm, pytest, Vitest, ruff, `tsc` |
+| Tooling | uv (Python environment and lockfile), npm, pytest, Vitest, ruff, Pyright, `tsc` |
 | GIS validation | QGIS for manual review of flagged cells and fragments (`abot review` writes the GeoPackages for it) |
 
 ## Repository structure
@@ -183,7 +183,7 @@ abot/
 ├── tests/                 pytest suite (250 tests)
 ├── dashboard/             React + TypeScript + Vite dashboard
 │   ├── src/               contract types, loader, models, pages, map
-│   ├── test/              Vitest suite (82 tests)
+│   ├── test/              Vitest suite (83 tests)
 │   └── vite/              bundle plugin (serve in dev, copy and verify at build)
 ├── docs/                  Architecture, methodology, data sources, contract, audits
 ├── Documentation.md       Research log and change log
@@ -268,9 +268,11 @@ npm run preview       # serve the production build locally
 # Python
 uv run pytest                        # 250 tests; tests that need data/ skip without it
 uv run ruff check .                  # lint
+uv run ruff format --check .         # formatting
+uv run pyright                       # type check (non-strict; see docs/M06_2C_CODE_QUALITY.md)
 
 # Dashboard (in dashboard/)
-npm test                             # Vitest: 82 tests
+npm test                             # Vitest: 83 tests
 npm run typecheck                    # tsc for the app and the build configuration
 npm run build                        # production build with bundle verification
 

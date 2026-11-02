@@ -11,7 +11,11 @@ at the end**, newest first.
 - Licence: source code MIT ([LICENSE](LICENSE), since Milestone 06.1); data keeps its own licences
   ([docs/ATTRIBUTION.md](docs/ATTRIBUTION.md))
 - Study area: Iloilo City, Iloilo, Western Visayas (Region VI), Philippines
-- Current state: **Milestone 06.2B** (commit `a594551`, 2026-11-02): GitHub Actions CI
+- Current state: **Milestone 06.2C** (2026-11-02, uncommitted): code-quality enforcement
+  ([docs/M06_2C_CODE_QUALITY.md](docs/M06_2C_CODE_QUALITY.md)). The eight unformatted Python files
+  were formatted, dead dashboard code was removed and `esc()` deduplicated, and Pyright (non-strict)
+  was added. CI now also runs `ruff format --check` and `pyright`. No analytical code path, result,
+  bundle or contract version changed. Before that, **Milestone 06.2B** (commit `a594551`): GitHub Actions CI
   ([docs/M06_2B_CI.md](docs/M06_2B_CI.md)) checks the Python package and the dashboard on every push
   and pull request to `main`, without `data/`. Its first run failed one timing-sensitive test on
   Linux. The test fix (commit `7444229`) made both jobs pass on GitHub (run 41377198195). Before that, **Milestone 06.2A follow-up** (commit
@@ -252,7 +256,8 @@ Column definitions: [docs/DATA_DICTIONARY.md](docs/DATA_DICTIONARY.md).
 - Python 3.13 (3.13.18 in the Milestone 01 run), managed with **uv**. Dependencies are pinned in `uv.lock`.
 - Key libraries (versions used): geopandas 1.2.0, osmnx 2.1.1, networkx 3.7, rasterio 1.5.2,
   shapely 2.2.0, pyproj 3.8.0, numpy 2.5.4, pandas 3.1.0, scipy 1.18.1, folium 0.20.0.
-- Dev tools: pytest, ruff. No dependencies were added in Milestone 02 or 02B.
+- Dev tools: pytest, ruff, pyright 1.1.414 (M06.2C; configured in `[tool.pyright]`, non-strict
+  "standard" mode). No dependencies were added in Milestone 02 or 02B.
 - Frontend (`dashboard/`, Milestone 05.2): Node 24.18.0, npm 10.8.1; versions pinned in
   `dashboard/package.json` and `dashboard/package-lock.json`. Runtime: react 19.3.1, react-dom 19.3.1,
   leaflet 1.9.4 (used directly, no React wrapper), @fontsource/atkinson-hyperlegible 5.3.0
@@ -563,7 +568,7 @@ evacuation and transport are descriptive-only categories (see Section 8).
 | `abot audit` (3 km baseline) | M02B: PASS 50, WARN 3, FAIL 0, INFO 11. M03 (with the experiment-run checks): PASS 54, WARN 4 (pending reviews, Guimaras facilities, stale `e7_buffer_3km`), FAIL 0, INFO 11. M04: PASS 55 (new archive `hist_e7_buffer_3km_m02` verified), WARN 4, FAIL 0, INFO 11. M04 follow-up: PASS 57 (A3 layer current; review restore point verified), WARN 3 (`e7_buffer_3km` cleared; 7 duplicates still pending), FAIL 0, INFO 11 |
 | Determinism (M04 + follow-up) | `abot components` under `PYTHONHASHSEED` 0 and 12345: all 17 evidence files and the A3 CSVs byte-identical (A3 GeoPackage identical in content); A1 reproduces the saved baseline, and baseline file hashes are unchanged on every run |
 
-### Unit tests (250 Python, all passing; 82 Vitest tests in `dashboard/test/`, all passing; 20 Milestone 06.2A tests in `tests/test_m06.py`, 3 of which read the real outputs; the 13 Milestone 01 tests are listed here, 40 Milestone 02 tests are in `tests/test_m02.py`, 32 Milestone 02B tests in `tests/test_m02b.py`, 18 Milestone 03 tests in `tests/test_m03.py`, 97 Milestone 04 tests in `tests/test_m04.py`, 30 Milestone 05 tests in `tests/test_m05.py`, 2 of which read the real outputs and are skipped without them)
+### Unit tests (250 Python, all passing; 83 Vitest tests in `dashboard/test/`, all passing; 20 Milestone 06.2A tests in `tests/test_m06.py`, 3 of which read the real outputs; the 13 Milestone 01 tests are listed here, 40 Milestone 02 tests are in `tests/test_m02.py`, 32 Milestone 02B tests in `tests/test_m02b.py`, 18 Milestone 03 tests in `tests/test_m03.py`, 97 Milestone 04 tests in `tests/test_m04.py`, 30 Milestone 05 tests in `tests/test_m05.py`, 2 of which read the real outputs and are skipped without them)
 
 - Conversion from old PSGC codes to COD-AB p-codes (3 cases).
 - Merging of OSM query tags (lists and "any value").
@@ -830,6 +835,54 @@ uv run pytest           # offline unit tests
 
 Newest entries first. Each entry records the date, the milestone, what changed and why, files
 affected, and any effect on results. Future work is appended here as it is done.
+
+### 2026-11-02 — Milestone 06.2C: code-quality enforcement and technical cleanup (uncommitted)
+
+**Why:** The audit's remaining code-quality findings: 8 unformatted Python files (L2), dead
+frontend code (L1), a duplicated `esc()` (L3) and no Python type checker (M8). CI did not enforce
+formatting or types. Full record: [docs/M06_2C_CODE_QUALITY.md](docs/M06_2C_CODE_QUALITY.md).
+
+**Changed** (four separate changes):
+1. **Formatting only (L2):** `ruff format` on `archive.py`, `audit.py`, `cli.py`, `components.py`,
+   `fetch/targeted.py`, `osm.py`, `review.py` and `tests/test_m04.py`. The AST of every file is
+   identical to `HEAD`.
+2. **Frontend (L1, L3):**
+   - removed the unused `useHashRoute` and `hrefFor` (`router.ts`); `GroupSelect`,
+     `thresholdOptions`, `txt` and `printPage` (`ui.tsx`); `statLabel` and `statCodes`
+     (`model/view.ts`); and `RELIABILITY_DIMENSIONS` (`model/labels.ts`);
+   - `esc()` moved unchanged into `model/format.ts` and imported by `MapPage.tsx` and
+     `NetworkPage.tsx`;
+   - one Vitest test added for `esc()`.
+3. **Pyright (M8):**
+   - `pyright>=1.1.414` added to the `dev` group (dev-only: `nodeenv` and `typing-extensions` come
+     with it);
+   - `[tool.pyright]`: `standard` mode, `src` and `tests`, `useLibraryCodeForTypes = false` (pandas,
+     geopandas, rasterio, scipy and networkx have no type information) and
+     `reportUnnecessaryTypeIgnoreComment = "error"`;
+   - baseline 617 errors, 46 after the library setting, 0 after the fixes;
+   - fixes: the `osm._tags_match` and `_regex_match` annotations accept `None`; an equivalent
+     `snapshot is None` guard (`components.py`); an explicit `ValueError` when no WorldPop years
+     are configured (`population.py`); a typed test stand-in (`test_m06.py`); and a read-only
+     `Mapping`/`Sequence` annotation (`test_m04.py`);
+   - 19 line-scoped `# pyright: ignore[rule]` comments remain, each for a documented third-party
+     typing or checker limitation.
+4. **CI and documentation:**
+   - `.github/workflows/ci.yml`: the Python job adds `uv run ruff format --check .` and
+     `uv run pyright` between lint and tests. The job name and the dashboard job are unchanged;
+   - this entry, [docs/M06_2C_CODE_QUALITY.md](docs/M06_2C_CODE_QUALITY.md), a note in
+     [docs/M06_2B_CI.md](docs/M06_2B_CI.md) §3, and the README testing section.
+
+**Verified (2026-11-02, Windows, with `data/`):**
+- `uv sync --locked` OK; `ruff check .` passed; `ruff format --check .`: 53 files already
+  formatted; `pyright`: 0 errors;
+- pytest 250 passed (unchanged); typecheck clean; Vitest 83 passed; `npm run build` OK;
+- `data/` byte-identical before and after (259 files: paths, sizes and modification times;
+  SHA-256 for the 142 files outside `raw/` and `archive/`, including the installed bundle).
+
+**Not verified:** the updated workflow has not run on GitHub yet.
+
+**Effect on results:** none. No analytical method, indicator, dataset, archive, bundle or contract
+version (`abot-dashboard` 1.1.0) changed, and no runtime dependency was added.
 
 ### 2026-11-02 — CI passing on GitHub (uncommitted note)
 

@@ -1,4 +1,5 @@
-# Continuous integration for ABOT (Milestone 06.2B; see docs/M06_2B_CI.md).
+# Continuous integration for ABOT (Milestone 06.2B; see docs/M06_2B_CI.md). Milestone 06.2C added the
+# formatting and type checks to the Python job (see docs/M06_2C_CODE_QUALITY.md).
 # Verifies the Python package and the dashboard WITHOUT local data: no data/, no archives, no dashboard
 # bundle, no Overpass or download step. Tests that need data/ skip by design and are listed in the
 # job summary. Nothing is deployed and no artifact is uploaded.
@@ -47,6 +48,14 @@ jobs:
 
       - name: Lint (ruff)
         run: uv run ruff check .
+
+      - name: Format check (ruff)
+        run: uv run ruff format --check .
+
+      # Pyright from the dev group (version pinned in uv.lock), configured in [tool.pyright] in
+      # pyproject.toml. The wheel bundles Pyright itself; it runs on the runner's preinstalled Node.js.
+      - name: Type check (pyright)
+        run: uv run pyright
 
       - name: Test (pytest)
         run: uv run pytest -ra --junitxml=pytest-results.xml

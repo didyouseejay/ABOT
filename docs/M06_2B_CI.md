@@ -56,6 +56,10 @@ outcome.
 are known to need reformatting, and that cleanup is planned as a separate, behaviour-free commit.
 After that, add `uv run ruff format --check .` as a step.
 
+> **Update (M06.2C, 2026-11-02):** done. The files were formatted, and the Python job now runs
+> `uv run ruff format --check .` and `uv run pyright` between lint and tests. The dev group also
+> contains pyright. See [M06_2C_CODE_QUALITY.md](M06_2C_CODE_QUALITY.md).
+
 ## 4. Dashboard job ("Dashboard (types, tests, build)")
 
 `ubuntu-latest`, 15-minute timeout, every `run` in `dashboard/`.
