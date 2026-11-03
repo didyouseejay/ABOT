@@ -13,7 +13,13 @@ at the end**, newest first.
   ODbL 1.0 ([LICENSE-DATA.md](LICENSE-DATA.md), since M06.3); the source data keeps its own licences
   ([docs/ATTRIBUTION.md](docs/ATTRIBUTION.md))
 - Study area: Iloilo City, Iloilo, Western Visayas (Region VI), Philippines
-- Current state: **Milestone 06.3 Phase 0** (2026-11-03, uncommitted): identity and licensing
+- Current state: **Milestone 06.3 Phase 1** (2026-11-03, uncommitted): release tooling and trust
+  anchor ([releases/README.md](releases/README.md)). New standard-library scripts in
+  `scripts/release/` package the dashboard bundle (and optionally the baseline OSM responses) as
+  deterministic ZIP assets with a release record `releases/vX.Y.Z.json`. They verify downloaded assets
+  against the record read from the Git tag, install a verified bundle safely, and decide release
+  eligibility. Nothing was deployed or published, and no analytical code path, result, bundle or
+  contract version changed. Before that, **Milestone 06.3 Phase 0** (commit `c185549`): identity and licensing
   corrections before public deployment. Institutional branding was removed from the dashboard and
   project metadata, and ABOT is now attributed as an independent personal portfolio project. An ODbL
   1.0 notice ([LICENSE-DATA.md](LICENSE-DATA.md)) appears in the dashboard footer and About page, and
@@ -575,7 +581,7 @@ evacuation and transport are descriptive-only categories (see Section 8).
 | `abot audit` (3 km baseline) | M02B: PASS 50, WARN 3, FAIL 0, INFO 11. M03 (with the experiment-run checks): PASS 54, WARN 4 (pending reviews, Guimaras facilities, stale `e7_buffer_3km`), FAIL 0, INFO 11. M04: PASS 55 (new archive `hist_e7_buffer_3km_m02` verified), WARN 4, FAIL 0, INFO 11. M04 follow-up: PASS 57 (A3 layer current; review restore point verified), WARN 3 (`e7_buffer_3km` cleared; 7 duplicates still pending), FAIL 0, INFO 11 |
 | Determinism (M04 + follow-up) | `abot components` under `PYTHONHASHSEED` 0 and 12345: all 17 evidence files and the A3 CSVs byte-identical (A3 GeoPackage identical in content); A1 reproduces the saved baseline, and baseline file hashes are unchanged on every run |
 
-### Unit tests (250 Python, all passing; 83 Vitest tests in `dashboard/test/`, all passing; 20 Milestone 06.2A tests in `tests/test_m06.py`, 3 of which read the real outputs; the 13 Milestone 01 tests are listed here, 40 Milestone 02 tests are in `tests/test_m02.py`, 32 Milestone 02B tests in `tests/test_m02b.py`, 18 Milestone 03 tests in `tests/test_m03.py`, 97 Milestone 04 tests in `tests/test_m04.py`, 30 Milestone 05 tests in `tests/test_m05.py`, 2 of which read the real outputs and are skipped without them)
+### Unit tests (343 Python, all passing; 87 Vitest tests in `dashboard/test/`, all passing; 93 Milestone 06.3 Phase 1 release-tooling tests in `tests/test_release.py`, all on synthetic repositories and bundles; 20 Milestone 06.2A tests in `tests/test_m06.py`, 3 of which read the real outputs; the 13 Milestone 01 tests are listed here, 40 Milestone 02 tests are in `tests/test_m02.py`, 32 Milestone 02B tests in `tests/test_m02b.py`, 18 Milestone 03 tests in `tests/test_m03.py`, 97 Milestone 04 tests in `tests/test_m04.py`, 30 Milestone 05 tests in `tests/test_m05.py`, 2 of which read the real outputs and are skipped without them)
 
 - Conversion from old PSGC codes to COD-AB p-codes (3 cases).
 - Merging of OSM query tags (lists and "any value").
@@ -843,7 +849,100 @@ uv run pytest           # offline unit tests
 Newest entries first. Each entry records the date, the milestone, what changed and why, files
 affected, and any effect on results. Future work is appended here as it is done.
 
-### 2026-11-03 — Milestone 06.3 Phase 0: identity and licensing corrections (uncommitted)
+### 2026-11-03 — Milestone 06.3 Phase 1: release tooling and trust anchor (uncommitted)
+
+**Why:** M06.3 will distribute the dashboard bundle through GitHub Releases and deploy the dashboard
+from a released bundle. Before any of that, a release needs three things: a reproducible package, a
+record of exactly what was approved, and a way for a fresh clone or a deployment job to check a
+downloaded asset against that record. A file that came with the same download cannot serve as that
+record.
+
+**Added:**
+- `scripts/release/release_lib.py`: shared standard-library helpers.
+  - Tag rule `vMAJOR.MINOR.PATCH`, Git queries, and the contract rule read from
+    `dashboard/src/contract/version.ts`.
+  - Manifest eligibility checks and the record blocks derived from the manifest and provenance.
+  - A deterministic ZIP writer (sorted entries, 1980-01-01 timestamps, mode 0644, stored). Stored
+    entries make the bytes independent of the zlib build.
+  - A safe in-memory archive reader.
+- `scripts/release/pack_release.py`: builds `abot-dashboard-v1-<tag>.zip` (the manifest, its eight
+  listed files and the two licence documents), optionally `abot-osm-snapshot-<tag>.zip` (the four
+  baseline Overpass responses and the targeted snapshot named in `provenance.json`), `SHA256SUMS`
+  and `releases/<tag>.json`.
+  - It refuses and writes nothing for: a stale bundle (`abot export-dashboard --check`), an edited,
+    incomplete or extra bundle file, an audit that was not obtained or did not pass/warn, a manifest
+    exported from an unclean tree, a dirty working tree, an invalid or existing tag, a newer or
+    other-major contract, or a source commit that is not an ancestor of HEAD.
+  - Licence texts are read from Git, not the working tree, so CRLF checkouts give the same bytes.
+- `scripts/release/verify_release.py`: reads the record with `git show <tag>:releases/<tag>.json`
+  and fails closed on any problem.
+  - Archive checks: SHA-256 and size of the archive, of every entry and of the manifest; every
+    manifest-listed file; the per-file envelopes; the contract against `SUPPORTED_VERSION` at the
+    tag; the audit; and the commit chain (source commit → packaged commit → tag).
+  - Record checks: every metadata block the record copies is recomputed from the archive and must
+    match. With `--osm-archive`, the snapshot is checked against the record and the bundle's
+    provenance.
+- `scripts/release/fetch_bundle.py`: downloads the recorded asset with `gh` or plain HTTPS and
+  verifies it fully before writing anything.
+  - It installs only the nine bundle files into `data/processed/dashboard/v1/`, via a temporary
+    directory and two renames, using the exporter's `.v1.tmp-`/`.v1.old-` names.
+  - An identical installed bundle is left alone. A different bundle needs `--replace`.
+  - `--dry-run`, `--verify-only` and `--archive` are supported.
+- `scripts/release/eligibility.py`: checks a valid tag, that the tag and its record exist and
+  match, draft/prerelease status, and latest/rollback. Inputs are explicit, and the release list
+  is the documented `gh release list --json tagName,isDraft,isPrerelease` output. No GitHub Actions
+  event structure is assumed, and status that no input provides is reported as "not evaluated".
+- `tests/test_release.py` (93 tests). Every test runs on a synthetic Git repository and bundle in a
+  temporary directory, with no real data and no network. "Forged" releases match the asset-level
+  hashes to a tampered archive, to show that each deeper check works on its own. The tests cover:
+  - determinism, including a clone at another path;
+  - each packaging refusal;
+  - tampered archive, manifest, data file, envelope and OSM snapshot;
+  - wrong byte size, missing or unexpected files and nested paths;
+  - path traversal, absolute paths, backslashes, symlinks, duplicates (also by case), oversized
+    and corrupt entries;
+  - unsupported major and newer minor contract versions, and record/manifest inconsistencies;
+  - invalid tags, missing records, and commits that are not ancestors;
+  - working-tree records being ignored;
+  - fetch never replacing a valid bundle with an invalid archive;
+  - eligibility for draft, prerelease, latest and rollback.
+- `releases/README.md`: record schema, asset names, trust-anchor design, packaging and verification
+  steps, safe-extraction rules, the fresh-clone procedure, checksum inspection and known
+  limitations.
+- `pyproject.toml`: Pyright also checks `scripts/` (with `extraPaths = ["scripts/release"]`).
+  pytest gets `pythonpath = ["scripts/release"]`, so the tests can import the standalone scripts.
+
+**Verified:**
+- The two bugs the new tests caught were fixed before completion: a `$`-anchored tag regex accepted
+  `"v1.0.0\n"` (all patterns now use `fullmatch`), and records shared the module-level licence dict.
+- `pytest` 343 passed (250 existing, 93 new), Vitest 87 passed, `ruff check`, `ruff format --check`
+  and `pyright` (0 errors) all pass.
+- On the real repository, `pack_release.py v0.1.0` refused with "working tree is dirty" and wrote
+  nothing, and `abot export-dashboard --check` reported the bundle current.
+- End to end on the real bundle, in a throwaway clone in a temporary directory (the clone's
+  commits and tag exist only there):
+  - The packaged archive is 10,196,335 bytes, SHA-256 `7b871681…af0e81`, with 11 entries. The OSM
+    snapshot is 12,410,351 bytes.
+  - `sha256sum -c SHA256SUMS` passed, and `verify_release.py` with the OSM archive passed.
+  - `fetch_bundle.py` installed nine files byte-identical to the real bundle, and a second run
+    changed nothing. `eligibility.py --require-latest` reported eligible.
+  - Packaging the same commit in a second clone at another path gave byte-identical archives,
+    `SHA256SUMS` and record.
+  - The real bundle's hashes were the same before and after.
+
+**Not changed:** the analytical pipeline, the bundle (not re-exported), the data contract, the
+dashboard, CI and Git history. No tag, GitHub Release, Vercel configuration, deployment workflow or
+secret was created. No dependency was added.
+
+**Known limitations:**
+- Tags are not signed.
+- The bundle's source commit (`86d9797`) is an ancestor of the release commit, not the release
+  commit itself. Ancestry does not prove that the code at the tag would regenerate the bundle.
+- Analytical reproducibility from the released OSM snapshot has not been tested.
+
+**Effect on results:** none.
+
+### 2026-11-03 — Milestone 06.3 Phase 0: identity and licensing corrections (commit `c185549`)
 
 **Why:** M06.3 will deploy the dashboard publicly (Vercel) and distribute the dataset through GitHub
 Releases. Before that, three things had to be fixed:

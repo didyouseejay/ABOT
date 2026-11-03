@@ -51,7 +51,9 @@ ignore = ["E501"]  # line length is left to `ruff format`
 [tool.pyright]
 # Non-strict type checking (M06.2C; see docs/M06_2C_CODE_QUALITY.md). "standard" is Pyright's default
 # mode: it checks calls, attributes and returns but does not demand annotations on every function.
-include = ["src", "tests"]
+include = ["src", "tests", "scripts"]
+# The release tools (M06.3) are standalone scripts that import each other by module name.
+extraPaths = ["scripts/release"]
 pythonVersion = "3.13"
 typeCheckingMode = "standard"
 venvPath = "."
@@ -66,3 +68,5 @@ reportUnnecessaryTypeIgnoreComment = "error"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# tests/test_release.py imports the standalone release scripts (M06.3 Phase 1).
+pythonpath = ["scripts/release"]
