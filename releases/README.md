@@ -5,8 +5,9 @@ is committed to Git at the release tag. The tools in [`scripts/release/`](../scr
 verify every downloaded release asset against the record read from the tag, never against a file
 that came with the assets.
 
-The tooling was added in Milestone 06.3 Phase 1. No release has been published yet. Deployment
-(Phase 2) is not configured.
+The tooling was added in Milestone 06.3 Phase 1. No release has been published yet. Phase 2 added
+the deployment workflow, which deploys a published release only after these checks pass. See
+[docs/DEPLOYMENT.md](../docs/DEPLOYMENT.md).
 
 ## 1. Assets
 
@@ -266,6 +267,7 @@ no CI event payload. All inputs are explicit:
 | `--draft`, `--prerelease true\|false` | The candidate's own status, if known. Must agree with `--releases` if the tag is listed there |
 | `--require-latest` | The candidate must be the highest published (non-draft, non-prerelease) version |
 | `--allow-rollback` | With `--require-latest`, also accept an older published version. The output marks it as a rollback |
+| `--require-published` | The candidate must appear in `--releases` as a published release (not a draft, not a prerelease). Added in Phase 2. The deployment workflow always passes it |
 
 Checks:
 1. Valid tag.
@@ -274,7 +276,8 @@ Checks:
 4. The record is valid and its `tag` matches.
 5. Not a draft.
 6. Not a prerelease.
-7. Latest, when requested.
+7. Published, when requested.
+8. Latest, when requested.
 
 A status that no input provides is reported as `not evaluated` and is never assumed. Drafts,
 prereleases and malformed tags in the list do not count as published versions. A candidate higher

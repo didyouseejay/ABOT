@@ -14,9 +14,11 @@ Inputs (all explicit; no CI event payload is read):
   candidate also appears in --releases, both must agree.
 - --require-latest: the candidate must be the highest published (non-draft, non-prerelease) version.
 - --allow-rollback: with --require-latest, an older published version is also accepted (rollback).
+- --require-published: the candidate must appear in --releases as published (not a draft, not a
+  prerelease). Without it, a tag that has no GitHub Release yet is only checked as far as inputs allow.
 
 Checks: valid tag; tag exists; release record committed at the tag; record tag matches; not a draft;
-not a prerelease; latest (when requested). Status that no input provides is reported as
+not a prerelease; published and latest (when requested). Status that no input provides is reported as
 "not evaluated", never assumed. Exit 0 if eligible, 1 if not, 2 for unusable input.
 """
 
@@ -94,6 +96,7 @@ def evaluate(
     prerelease: bool | None = None,
     require_latest: bool = False,
     allow_rollback: bool = False,
+    require_published: bool = False,
 ) -> Decision:
     d = Decision(tag)
     try:
@@ -127,6 +130,18 @@ def evaluate(
             d.add(f"not_{name}", SKIP, "no input provides this status")
         else:
             d.add(f"not_{name}", FAIL if value else PASS, f"{key}: {value}")
+
+    if require_published:
+        if releases is None:
+            d.add("published", FAIL, "--require-published needs --releases")
+        elif listed is None:
+            d.add("published", FAIL, f"{tag} is not a GitHub Release in the releases input")
+        elif listed["isDraft"] or listed["isPrerelease"]:
+            d.add("published", FAIL, f"{tag} is listed as a draft or prerelease")
+        else:
+            d.add("published", PASS, f"{tag} is a published release")
+    else:
+        d.add("published", SKIP, "not requested")
 
     if require_latest:
         if releases is None:
@@ -181,6 +196,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--prerelease", type=_bool, help="candidate is a prerelease (true|false)")
     p.add_argument("--require-latest", action="store_true")
     p.add_argument("--allow-rollback", action="store_true")
+    p.add_argument("--require-published", action="store_true")
     p.add_argument("--json", action="store_true", help="print the decision as JSON")
     a = p.parse_args(argv)
     try:
@@ -196,6 +212,7 @@ def main(argv: list[str] | None = None) -> int:
             prerelease=a.prerelease,
             require_latest=a.require_latest,
             allow_rollback=a.allow_rollback,
+            require_published=a.require_published,
         )
     except (InputError, OSError, ValueError) as e:
         print(f"eligibility: unusable input: {e}", file=sys.stderr)

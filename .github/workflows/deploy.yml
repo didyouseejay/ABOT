@@ -1,0 +1,166 @@
+# Production deployment of the ABOT dashboard (Milestone 06.3 Phase 2; see docs/DEPLOYMENT.md).
+# Deploys only a published GitHub Release, and only the dashboard bundle recorded for it:
+#   1. the tag must be eligible (scripts/release/eligibility.py): a published, non-draft,
+#      non-prerelease release with a release record at the tag, and the latest one unless a
+#      rollback is explicitly allowed;
+#   2. the bundle asset is downloaded and verified against releases/<tag>.json read from the tag
+#      (scripts/release/fetch_bundle.py), then installed;
+#   3. the dashboard at the tag is type-checked, tested and built; the build must carry exactly that
+#      bundle (scripts/release/prepare_deploy.py);
+#   4. the build is uploaded unchanged with `vercel deploy --prebuilt --prod` (Vercel builds nothing);
+#   5. if the repository variable ABOT_SITE_URL is set, the live site must serve the release's
+#      manifest with the expected security headers (scripts/release/check_live.py).
+# Secrets (environment "production"): VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID.
+# Every ${{ }} value used by a shell step is passed through env, never interpolated into a script.
+
+name: Deploy
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to deploy (vMAJOR.MINOR.PATCH); must be a published GitHub Release"
+        required: true
+        type: string
+      allow_rollback:
+        description: "Allow a release older than the latest published one (rollback)"
+        required: false
+        type: boolean
+        default: false
+
+# Read-only token: the job reads the repository and its releases and writes nothing to GitHub.
+permissions:
+  contents: read
+
+# One production deployment at a time; a queued one waits instead of cancelling a running upload.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Verify the release and deploy to Vercel
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    env:
+      TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.tag }}
+      ALLOW_ROLLBACK: ${{ github.event_name == 'workflow_dispatch' && inputs.allow_rollback || false }}
+      PY: uv run --no-project --python 3.13 python
+    steps:
+      - name: Validate the release tag
+        run: |
+          re='^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
+          if [[ ! "$TAG" =~ $re ]]; then
+            echo "::error::invalid release tag: '$TAG' (expected vMAJOR.MINOR.PATCH)"
+            exit 1
+          fi
+          echo "deploying $TAG (rollback allowed: $ALLOW_ROLLBACK)"
+
+      # Full history: the verifier checks that the bundle's source commit is an ancestor of the tag.
+      - name: Check out the release tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: refs/tags/${{ env.TAG }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install uv 0.13.6
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.13.6"
+
+      # The release scripts use only the standard library: no project dependencies are installed.
+      - name: Install Python 3.13
+        run: uv python install 3.13
+
+      - name: List the published releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release list --repo "$GITHUB_REPOSITORY" --json tagName,isDraft,isPrerelease --limit 1000 > "$RUNNER_TEMP/releases.json"
+
+      - name: Check release eligibility
+        env:
+          EVENT_DRAFT: ${{ github.event.release.draft }}
+          EVENT_PRERELEASE: ${{ github.event.release.prerelease }}
+        run: |
+          args=(--releases "$RUNNER_TEMP/releases.json" --require-published --require-latest)
+          if [ "$ALLOW_ROLLBACK" = "true" ]; then args+=(--allow-rollback); fi
+          if [ "$GITHUB_EVENT_NAME" = "release" ]; then
+            args+=(--draft "$EVENT_DRAFT" --prerelease "$EVENT_PRERELEASE")
+          fi
+          $PY scripts/release/eligibility.py "$TAG" "${args[@]}"
+
+      - name: Download, verify and install the release bundle
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: $PY scripts/release/fetch_bundle.py "$TAG" --repo-slug "$GITHUB_REPOSITORY"
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
+
+      - name: Install the locked dashboard dependencies
+        working-directory: dashboard
+        run: npm ci
+
+      - name: Type check, test and build the dashboard
+        working-directory: dashboard
+        run: |
+          npm run typecheck
+          npm test
+          npm run build
+
+      - name: Prepare the prebuilt deployment
+        run: $PY scripts/release/prepare_deploy.py "$TAG" --dist dashboard/dist --out "$RUNNER_TEMP/site/.vercel/output"
+
+      - name: Deploy to Vercel (production)
+        id: vercel
+        working-directory: ${{ runner.temp }}/site
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TELEMETRY_DISABLED: "1"
+        run: |
+          for v in VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID; do
+            if [ -z "${!v}" ]; then echo "::error::secret $v is not set in the production environment"; exit 1; fi
+          done
+          npm install --global --no-fund --no-audit vercel@65.10.0
+          vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+          url=$(vercel deploy --prebuilt --prod --yes --token="$VERCEL_TOKEN")
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "deployment: $url"
+
+      - name: Check the live site
+        env:
+          SITE_URL: ${{ vars.ABOT_SITE_URL }}
+        run: |
+          if [ -z "$SITE_URL" ]; then
+            echo "::notice::repository variable ABOT_SITE_URL is not set: live check skipped"
+            exit 0
+          fi
+          $PY scripts/release/check_live.py "$TAG" "$SITE_URL"
+
+      - name: Summary
+        if: ${{ always() }}
+        env:
+          DEPLOY_URL: ${{ steps.vercel.outputs.url }}
+          SITE_URL: ${{ vars.ABOT_SITE_URL }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          {
+            echo "### ABOT deployment: $TAG ($JOB_STATUS)"
+            echo ""
+            echo "- Rollback allowed: $ALLOW_ROLLBACK"
+            echo "- Vercel deployment: ${DEPLOY_URL:-not deployed}"
+            echo "- Production site: ${SITE_URL:-ABOT_SITE_URL not set}"
+            if git cat-file -e "refs/tags/$TAG:releases/$TAG.json" 2>/dev/null; then
+              echo "- Manifest SHA-256 (from releases/$TAG.json at the tag): $(git show "refs/tags/$TAG:releases/$TAG.json" | python3 -c 'import json,sys; print(json.load(sys.stdin)["dashboard"]["manifest_sha256"])')"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
