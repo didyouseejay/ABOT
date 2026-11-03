@@ -98,7 +98,7 @@ function known(b: LoadedBundle) {
       ) : (
         <ul className="statement-list">
           {b.manifest.known_issues.map((k) => (
-            <li key={k.code} style={{ gridTemplateColumns: "8rem minmax(0,1fr)" }}>
+            <li key={k.code} style={{ gridTemplateColumns: "minmax(0,1fr)" }}>
               <span>
                 <Badge tone="warn">{k.code}</Badge>
               </span>

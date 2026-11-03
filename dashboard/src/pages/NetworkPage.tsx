@@ -5,7 +5,7 @@
  * boxes), the gap evidence and the access-tag analysis, each record stamped "not applied".
  */
 import type * as LeafletNS from "leaflet";
-import { type ReactNode, useRef } from "react";
+import { Fragment, type ReactNode, useRef } from "react";
 import { Chips } from "../components/notes.tsx";
 import { guard, Unavailable } from "../components/states/States.tsx";
 import { Badge, CatSym, Check, Int, Num, NullValue, PageHeader, Panel, Role, Scen, SectionBand, Stamp, StatStrip } from "../components/ui.tsx";
@@ -257,6 +257,19 @@ function ComponentTable({ n }: { n: Network }) {
 
 const yesNo = (status: string, good: string) => (status === good ? "ok" : "warn");
 
+/** "way/1;way/2" with a line-break opportunity after each ";", so long OSM way lists wrap between ids. */
+const breakAfterSemicolons = (s: string) =>
+  s.split(";").map((part, i) => (
+    <Fragment key={i}>
+      {i > 0 && (
+        <>
+          ;<wbr />
+        </>
+      )}
+      {part}
+    </Fragment>
+  ));
+
 function gapCards(n: Network, analysisText: string | undefined) {
   return (
     <div className="gap-cards">
@@ -275,7 +288,7 @@ function gapCards(n: Network, analysisText: string | undefined) {
                 <dd>
                   <Badge tone="info">{underscores(g.snapshot_physical_connection)}</Badge>{" "}
                   <span className="small muted">
-                    {g.snapshot_link_m === null ? "" : `${fixed(g.snapshot_link_m, 1)} m`} via <span className="mono">{g.snapshot_link_ways ?? "—"}</span>
+                    {g.snapshot_link_m === null ? "" : `${fixed(g.snapshot_link_m, 1)} m`} via <span className="mono">{breakAfterSemicolons(g.snapshot_link_ways ?? "—")}</span>
                   </span>
                 </dd>
               </div>

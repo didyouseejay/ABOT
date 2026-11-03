@@ -13,7 +13,13 @@ at the end**, newest first.
   ODbL 1.0 ([LICENSE-DATA.md](LICENSE-DATA.md), since M06.3); the source data keeps its own licences
   ([docs/ATTRIBUTION.md](docs/ATTRIBUTION.md))
 - Study area: Iloilo City, Iloilo, Western Visayas (Region VI), Philippines
-- Current state: **Milestone 06.3 Phase 1** (2026-11-03, uncommitted): release tooling and trust
+- Current state: **Milestone 06.3 Phase 2** (2026-11-03, uncommitted): deployment workflow
+  ([docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)). `.github/workflows/deploy.yml` deploys the dashboard
+  to Vercel only from a published GitHub Release. The release must pass eligibility and full
+  verification against its tagged record. The workflow uploads a prebuilt output with strict
+  security headers, and Vercel builds nothing. The Vercel project and secrets are not set up yet,
+  and nothing has been deployed. No analytical code path, result, bundle or contract version
+  changed. Before that, **Milestone 06.3 Phase 1** (commit `b2ef204`): release tooling and trust
   anchor ([releases/README.md](releases/README.md)). New standard-library scripts in
   `scripts/release/` package the dashboard bundle (and optionally the baseline OSM responses) as
   deterministic ZIP assets with a release record `releases/vX.Y.Z.json`. They verify downloaded assets
@@ -849,7 +855,115 @@ uv run pytest           # offline unit tests
 Newest entries first. Each entry records the date, the milestone, what changed and why, files
 affected, and any effect on results. Future work is appended here as it is done.
 
-### 2026-11-03 — Milestone 06.3 Phase 1: release tooling and trust anchor (uncommitted)
+### 2026-11-03 — Dashboard layout fix: content overflowing cards on Network and Data quality (uncommitted)
+
+**Why:** a viewing audit of the production build covered all eight pages at eight widths
+(320–1920 px). It found content running past card edges, and two of these were reported with
+screenshots. On Network, the gap cards' OSM way lists (`way/…;way/…`), the "Analysis only · not
+applied" stamp and the "confirmed in osm topology" badge ran out of the card. At 1280 and 1440 px
+this also made the page scroll sideways. On Data quality, `priority_barangays_not_connected` ran out
+of the Known issues card.
+
+**Changed:**
+- `dashboard/src/pages/NetworkPage.tsx`: way lists get a line-break opportunity after each `;`
+  (`<wbr>`), so they wrap between ids, never inside one.
+- `dashboard/src/styles/app.css`:
+  - gap-card values may wrap long tokens (`min-width: 0; overflow-wrap: anywhere`);
+  - stamps and badges inside gap-card fields wrap within the field;
+  - `.statement-list` cells may wrap long tokens.
+- `dashboard/src/pages/QualityPage.tsx`: in Known issues, the badge sits above the text instead of
+  in an 8rem column, so the text gets the full card width and identifiers are not split.
+
+**Verified:**
+- Typecheck passes, Vitest 87 passed, and the build succeeds.
+- Re-running the audit on Network and Data quality at all eight widths found no remaining overflow
+  in the gap cards or Known issues. Screenshots at 375, 1280 and 1440 px show every value inside
+  its card.
+
+**Not fixed yet (from the same audit):**
+- the top bar at 320 px (the Menu button is cut off);
+- Methodology › Documents at 320 px (paths overprint their titles);
+- the Map scale bar hidden behind the attribution at 768 px or narrower;
+- barangay names cut to one letter in Home's rank list at 320 px;
+- tables wider than the panel on Network and Data quality at 414 px or narrower;
+- small tap targets, 10–11 px tag text, and the contrast of two Network category symbols.
+
+**Effect on results:** none (presentation only).
+
+### 2026-11-03 — Milestone 06.3 Phase 2: deployment workflow (Vercel, from verified releases; uncommitted)
+
+**Why:** the public dashboard should only ever serve a bundle that passed the Phase 1 checks against
+the release record committed at its tag. The deployment therefore has to start from a published
+GitHub Release, verify it, build the dashboard around it, and upload exactly those bytes. Vercel must
+not build anything itself.
+
+**Added:**
+- `.github/workflows/deploy.yml`. It runs when a GitHub Release is published, or by hand
+  (`workflow_dispatch` with `tag` and `allow_rollback`). Steps:
+  1. Validate the tag.
+  2. Check out the tag with full history.
+  3. Run `eligibility.py --require-published --require-latest` (`--allow-rollback` only when ticked).
+  4. Run `fetch_bundle.py <tag>`.
+  5. Run `npm ci`, typecheck, tests and build.
+  6. Run `prepare_deploy.py <tag>`.
+  7. Run `vercel deploy --prebuilt --prod` (CLI pinned to 65.10.0).
+  8. Optionally run `check_live.py` when the `ABOT_SITE_URL` variable is set.
+
+  Safety properties:
+  - The job token is read-only (`contents: read`), and actions are pinned to the same SHAs as
+    `ci.yml`.
+  - Every `${{ }}` value reaches scripts through `env`, never through the script text, which guards
+    against script injection through a tag name.
+  - The Vercel secrets reach only the deploy step.
+  - It runs in the `production` environment, in concurrency group `deploy-production`, and a queued
+    run never cancels one in progress.
+- `scripts/release/prepare_deploy.py`. It checks that `dashboard/dist/data/v1/` holds exactly the
+  release's verified bundle: the manifest and the files it lists, with nothing extra or edited, and
+  a manifest SHA-256 equal to the tagged record. It also checks that `index.html` exists. It then
+  writes a Vercel Build Output API v3 directory (`static/` + `config.json`) with the security
+  headers:
+  - a CSP that allows no inline or third-party scripts, and only OSM tiles as third-party images;
+  - `nosniff`, `X-Frame-Options: DENY`, Referrer-Policy, Permissions-Policy and COOP;
+  - immutable caching for `/assets/*` and revalidation for `/data/v1/*`.
+- `scripts/release/check_live.py`. It fetches `<site>/data/v1/manifest.json`, compares its SHA-256
+  with the tagged record, and checks the security headers on `<site>/`. It retries for about a
+  minute and rejects bad URLs and network errors.
+- `scripts/release/eligibility.py`: new `--require-published` flag. The candidate must appear in the
+  releases list as published (not a draft, not a prerelease).
+- `vercel.json`: `git.deploymentEnabled: false`, so a Git push can never trigger a Vercel build.
+- `tests/test_deploy.py` (17 tests): build-output preparation and each of its refusals, the CSP, the
+  live check (matching site, wrong bundle or headers, bad URLs, network errors), `--require-published`,
+  and static checks of the workflow. The static checks cover triggers and permissions, action pins,
+  no `${{ }}` in scripts, the tag rule matching `release_lib.TAG_RE`, step order and gates, secrets
+  reaching only the deploy step, and Git deployments being disabled.
+- `docs/DEPLOYMENT.md`: pipeline, headers, the one-time Vercel/GitHub setup, how to publish a release,
+  rollback and redeploy, manual checks and known limitations.
+- `releases/README.md`: points to the deployment workflow, and documents `--require-published` as
+  eligibility check 7.
+
+**Verified:**
+- `pytest` 360 passed (343 existing, 17 new), Vitest 87 passed, `ruff check`, `ruff format --check`
+  and `pyright` (0 errors) all pass.
+- The CSP was tested in Chrome on the production build of the real bundle, served locally with
+  exactly these headers. All eight pages rendered, all 24 visible street-map tiles loaded, and there
+  were no `securitypolicyviolation` events and no console errors.
+
+**Not changed:** the analytical pipeline, the bundle, the data contract, dashboard code, `ci.yml` and
+Git history. No tag, GitHub Release, Vercel project, secret or deployment was created. No dependency
+was added.
+
+**Known limitations:**
+- The workflow has never run. Its first run needs the maintainer's Vercel project, secrets,
+  `production` environment and a published release (DEPLOYMENT.md §2–§3).
+- Vercel CLI and Build Output API behaviour is taken from Vercel's documentation and has not been
+  tested here.
+- Source maps are deployed (audit finding L6).
+- Without a required reviewer on the `production` environment, publishing a release deploys it
+  immediately.
+
+**Effect on results:** none.
+
+### 2026-11-03 — Milestone 06.3 Phase 1: release tooling and trust anchor (commit `b2ef204`)
 
 **Why:** M06.3 will distribute the dashboard bundle through GitHub Releases and deploy the dashboard
 from a released bundle. Before any of that, a release needs three things: a reproducible package, a
