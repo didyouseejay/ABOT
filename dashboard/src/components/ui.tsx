@@ -196,6 +196,77 @@ export function StatStrip({ items }: { items: [ReactNode, ReactNode][] }) {
   );
 }
 
+/**
+ * "On this page" navigation for the long researcher pages. Buttons, not links: the hash is the route,
+ * so an in-page "#id" link would navigate away. The target section is scrolled to and focused.
+ */
+export function PageToc({ items }: { items: [id: string, label: string][] }) {
+  const go = (id: string) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    el.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+    if (!el.hasAttribute("tabindex")) el.setAttribute("tabindex", "-1");
+    el.focus({ preventScroll: true });
+  };
+  return (
+    <nav className="toc" aria-label="On this page">
+      <span className="toc__label">On this page</span>
+      <ul className="toc__list">
+        {items.map(([id, l]) => (
+          <li key={id}>
+            <button type="button" className="toc__link" onClick={() => go(id)}>
+              {l}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}
+
+/** A labelled anchor section of a researcher page (the target of PageToc). */
+export function PageSection({ id, title, lead, kind, tags, children }: { id: string; title: string; lead?: ReactNode; kind?: "evidence"; tags?: ReactNode; children: ReactNode }) {
+  return (
+    <section className={`rsection${kind ? ` rsection--${kind}` : ""}`} id={id} aria-labelledby={`${id}-sh`}>
+      <div className="rsection__head">
+        <h2 id={`${id}-sh`}>{title}</h2>
+        {tags}
+        {lead && <p>{lead}</p>}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+/** A headline figure: big value, a label, an optional status badge and a detail line. */
+export function MetricTile({ value, label, detail, badge, tone, children }: { value: ReactNode; label: ReactNode; detail?: ReactNode; badge?: ReactNode; tone?: "ok" | "warn" | "error" | "info" | "unknown"; children?: ReactNode }) {
+  return (
+    <div className={`metric${tone ? ` metric--${tone}` : ""}`}>
+      <div className="metric__top">
+        <span className="metric__label">{label}</span>
+        {badge}
+      </div>
+      <div className="metric__v">{value}</div>
+      {children}
+      {detail && <div className="metric__detail">{detail}</div>}
+    </div>
+  );
+}
+
+/** A proportional bar of labelled parts; the parts are also listed in text (colour is never the only cue). */
+export function PropBar({ parts, label }: { parts: { key: string; n: number; cls: string; text: string }[]; label: string }) {
+  const total = parts.reduce((s, p) => s + Math.max(0, p.n), 0);
+  return (
+    <div className="propbar" role="img" aria-label={`${label}: ${parts.map((p) => `${fixed(p.n, 0)} ${p.text}`).join(", ")}`}>
+      {total > 0 &&
+        parts
+          .filter((p) => p.n > 0)
+          .map((p) => <span key={p.key} className={`propbar__seg ${p.cls}`} style={{ width: `${(100 * p.n) / total}%` }} title={`${fixed(p.n, 0)} ${p.text}`} />)}
+    </div>
+  );
+}
+
 // --- controls -----------------------------------------------------------------------------------
 
 export type SegOption = [value: string, label: ReactNode, disabled?: boolean];

@@ -5,10 +5,10 @@
  * boxes), the gap evidence and the access-tag analysis, each record stamped "not applied".
  */
 import type * as LeafletNS from "leaflet";
-import { Fragment, type ReactNode, useRef } from "react";
+import { type CSSProperties, Fragment, type ReactNode, useRef } from "react";
 import { Chips } from "../components/notes.tsx";
 import { guard, Unavailable } from "../components/states/States.tsx";
-import { Badge, CatSym, Check, Int, Num, NullValue, PageHeader, Panel, Role, Scen, SectionBand, Stamp, StatStrip } from "../components/ui.tsx";
+import { Badge, CatSym, Check, Int, MetricTile, Num, NullValue, PageHeader, PageSection, PageToc, Panel, PropBar, Role, Scen, Stamp } from "../components/ui.tsx";
 import type { Network } from "../contract/types.ts";
 import type { LoadedBundle } from "../data/loadBundle.ts";
 import { BasemapSwitcher } from "../map/BasemapSwitcher.tsx";
@@ -26,6 +26,9 @@ const APPROACH: Record<string, [ReactNode, ReactNode]> = {
 };
 
 function approaches(n: Network, total: number) {
+  const rec = (r: object, id: string) => (r as Record<string, number | null>)[`pop_${id}`] ?? 0;
+  const notMain = (r: object) => CATEGORIES.filter((c) => c.id !== "network_connected").reduce((s, c) => s + rec(r, c.id), 0);
+  const nmMax = Math.max(1e-9, ...n.approaches.map(notMain));
   return (
     <Panel id="appr" cls="panel--evidence" title="Approach comparison: A1, A2, A3" tags={<Role k="evidence" />} sub="How each connectivity rule assigns residents to categories. A3 is the reporting scenario used everywhere else; A2 appears only here." codes={["DQ-A1-OPT"]}>
       <div className="table-wrap">
@@ -33,7 +36,7 @@ function approaches(n: Network, total: number) {
           <caption className="visually-hidden">Approach comparison</caption>
           <thead>
             <tr className="data-table__group">
-              <th colSpan={3} />
+              <th colSpan={4} />
               <th colSpan={4} className="col-sep">
                 Residents by category (of {fixed(total, 0)})
               </th>
@@ -46,6 +49,9 @@ function approaches(n: Network, total: number) {
               <th scope="col" className="n">
                 Network km
               </th>
+              <th scope="col" className="n appr__dist-h">
+                Not network-connected
+              </th>
               {CATEGORIES.map((c, i) => (
                 <th key={c.id} scope="col" className={`n${i ? "" : " col-sep"}`}>
                   <CatSym id={c.id} /> {c.label}
@@ -56,9 +62,9 @@ function approaches(n: Network, total: number) {
           <tbody>
             {n.approaches.map((r) => (
               <tr key={r.approach}>
-                <th scope="row" style={{ fontWeight: 400 }}>
+                <th scope="row" className="appr__name">
                   <div style={{ display: "flex", gap: ".25rem", flexWrap: "wrap", marginBottom: ".2rem" }}>{APPROACH[r.approach] ?? <code>{r.approach}</code>}</div>
-                  <span className="small muted" style={{ display: "block", maxWidth: "26rem" }}>
+                  <span className="small muted" style={{ display: "block" }}>
                     {r.scenario_label}
                   </span>
                 </th>
@@ -67,6 +73,12 @@ function approaches(n: Network, total: number) {
                 </td>
                 <td className="n">
                   <Num v={r.network_km} d={1} />
+                </td>
+                <td className="n appr__dist">
+                  <span className="appr__nm">{fixed(notMain(r), 1)}</span>
+                  <span className="appr__bar" style={{ width: `${(100 * notMain(r)) / nmMax}%` }}>
+                    <PropBar label={`Residents not network-connected under ${r.approach}`} parts={CATEGORIES.filter((c) => c.id !== "network_connected").map((c) => ({ key: c.id, n: rec(r, c.id), cls: `propbar__seg--${c.id}`, text: c.label.toLowerCase() }))} />
+                  </span>
                 </td>
                 {CATEGORIES.map((c, i) => (
                   <td key={c.id} className={`n${i ? "" : " col-sep"}`}>
@@ -78,6 +90,15 @@ function approaches(n: Network, total: number) {
           </tbody>
         </table>
       </div>
+      <p className="chart-summary">The bar splits the residents who are not network-connected by category; its length is relative to the largest of the three approaches.</p>
+      <div className="legend-inline cat-legend">
+        {CATEGORIES.filter((c) => c.id !== "network_connected").map((c) => (
+          <span key={c.id} className="legend-inline__item">
+            <span className={`legend__sw propbar__seg--${c.id}`} aria-hidden="true" />
+            <CatSym id={c.id} /> {c.label}
+          </span>
+        ))}
+      </div>
     </Panel>
   );
 }
@@ -87,9 +108,12 @@ function transition(n: Network) {
   const rows = [...new Set(T.map((x) => x.a1_category))];
   const get = (a1: string, a3: string) => T.find((x) => x.a1_category === a1 && x.a3_category === a3);
   const cross = T.filter((x) => x.a1_category !== x.a3_category && x.pop > 0).sort((a, b) => b.pop - a.pop);
+  // shading on a log scale, so the small cross-category flows stay visible beside the large diagonal
+  const max = Math.log10(1 + Math.max(1, ...T.map((x) => x.pop)));
+  const heat = (v: number) => (v > 0 ? Math.log10(1 + v) / max : 0);
   return (
     <Panel id="trans" cls="panel--evidence" title="A1 → A3 population transition" tags={<Role k="evidence" />}>
-      <table className="matrix">
+      <table className="matrix matrix--heat">
         <caption className="visually-hidden">Residents by A1 category (rows) and A3 category (columns)</caption>
         <thead>
           <tr>
@@ -108,7 +132,9 @@ function transition(n: Network) {
               {CATEGORIES.map((c) => {
                 const t = get(r, c.id);
                 return t ? (
-                  <td key={c.id}>{fixed(t.pop, 1)}</td>
+                  <td key={c.id} style={{ "--heat": heat(t.pop).toFixed(3) } as CSSProperties} data-same={r === c.id ? "true" : undefined}>
+                    {fixed(t.pop, 1)}
+                  </td>
                 ) : (
                   <td key={c.id} className="absent" title="Absent pair: no residents in this combination (not a zero value)">
                     absent
@@ -124,7 +150,7 @@ function transition(n: Network) {
           .slice(0, 2)
           .map((x) => `${fixed(x.pop, 1)} residents ${x.a1_category === "network_connected" ? "connected" : "not connected"} under A1 are ${CATEGORIES.find((c) => c.id === x.a3_category)?.label.toLowerCase() ?? x.a3_category} under A3`)
           .join("; ")}
-        {cross.length ? ". " : ""}Hatched cells are pairs absent from the bundle, not zeros.
+        {cross.length ? ". " : ""}Darker cells hold more residents (log scale). Hatched cells are pairs absent from the bundle, not zeros.
       </p>
     </Panel>
   );
@@ -275,30 +301,43 @@ function gapCards(n: Network, analysisText: string | undefined) {
     <div className="gap-cards">
       {n.gap_evidence.map((g) => {
         const gates = (g.snapshot_corridor_gates ?? "").split(";").filter((x) => x.trim());
+        const ways = (g.snapshot_link_ways ?? "").split(";").filter((x) => x.trim());
         return (
           <article key={g.fragment} className="gap-card" aria-labelledby={`gap-${g.fragment}`}>
-            <div className="gap-card__head">
-              <h3 id={`gap-${g.fragment}`}>{g.fragment}</h3>
-              <span className="small muted">{componentClassLabel(g.component_class)}</span>
+            <header className="gap-card__head">
+              <div>
+                <h3 id={`gap-${g.fragment}`}>{g.fragment}</h3>
+                <span className="gap-card__class">{componentClassLabel(g.component_class)}</span>
+              </div>
               <Role k="evidence" />
-            </div>
+            </header>
+            <dl className="gap-card__figs">
+              <div>
+                <dt>Gap in walk cache</dt>
+                <dd>
+                  {g.cache_gap_to_main_m === null ? <NullValue /> : <>{fixed(g.cache_gap_to_main_m, 1)}<small> m</small></>}
+                </dd>
+              </div>
+              <div>
+                <dt>Mapped link</dt>
+                <dd>{g.snapshot_link_m === null ? <NullValue /> : <>{fixed(g.snapshot_link_m, 1)}<small> m</small></>}</dd>
+              </div>
+              <div>
+                <dt>Gates on corridor</dt>
+                <dd>{gates.length}</dd>
+              </div>
+            </dl>
             <dl className="gap-card__fields">
               <div className="gap-card__field">
                 <dt>Physical connection</dt>
                 <dd>
-                  <Badge tone="info">{underscores(g.snapshot_physical_connection)}</Badge>{" "}
-                  <span className="small muted">
-                    {g.snapshot_link_m === null ? "" : `${fixed(g.snapshot_link_m, 1)} m`} via <span className="mono">{breakAfterSemicolons(g.snapshot_link_ways ?? "—")}</span>
-                  </span>
+                  <Badge tone="info">{underscores(g.snapshot_physical_connection)}</Badge>
                 </dd>
               </div>
               <div className="gap-card__field">
                 <dt>Mapped access</dt>
                 <dd>
-                  <code>{g.snapshot_link_access_tags ?? "—"}</code> · gates:{" "}
-                  <span className="small">
-                    {gates.length} gate{gates.length === 1 ? "" : "s"} on the corridor
-                  </span>
+                  <code>{g.snapshot_link_access_tags ?? "—"}</code>
                 </dd>
               </div>
               <div className="gap-card__field">
@@ -318,23 +357,30 @@ function gapCards(n: Network, analysisText: string | undefined) {
                 <dd>{g.snapshot_field_verification_required ? <Badge tone="warn">Required</Badge> : <Badge tone="ok">Not required</Badge>}</dd>
               </div>
               <div className="gap-card__field">
-                <dt>Gap in walk cache</dt>
-                <dd>
-                  {g.cache_gap_to_main_m === null ? <NullValue /> : `${fixed(g.cache_gap_to_main_m, 1)} m`}
-                  {g.cache_noexit_at_gap ? " · noexit=yes at gap" : ""}
-                </dd>
-              </div>
-              <div className="gap-card__field">
                 <dt>Applied to network</dt>
                 <dd>
                   {g.applied ? "Yes" : "No"} {!g.applied && <Stamp title={analysisText} />}
                 </dd>
               </div>
+              {g.cache_noexit_at_gap && (
+                <div className="gap-card__field">
+                  <dt>At the gap</dt>
+                  <dd>
+                    <code>noexit=yes</code>
+                  </dd>
+                </div>
+              )}
             </dl>
-            <p className="small muted" style={{ margin: 0, padding: "0 var(--space-4) var(--space-3)" }}>
-              {g.classification_reason}
-            </p>
-            <div className="panel__foot" style={{ background: "transparent" }}>
+            <p className="gap-card__reason">{g.classification_reason}</p>
+            {ways.length > 0 && (
+              <details className="gap-card__ways">
+                <summary>
+                  {ways.length} OSM way{ways.length === 1 ? "" : "s"} on the link
+                </summary>
+                <p className="mono">{breakAfterSemicolons(g.snapshot_link_ways ?? "")}</p>
+              </details>
+            )}
+            <div className="gap-card__foot">
               <Chips codes={["DQ-PHYS-NOT-PUBLIC", "DQ-ANALYSIS-ONLY"]} />
             </div>
           </article>
@@ -346,9 +392,16 @@ function gapCards(n: Network, analysisText: string | undefined) {
 
 function access(n: Network, analysisText: string | undefined) {
   const stamp = (applied: boolean) => (applied ? <Badge tone="warn">Applied</Badge> : <Stamp title={analysisText} />);
+  const kmMax = Math.max(1e-9, ...n.access_classification.map((a) => a.km ?? 0));
+  const loseMax = Math.max(1e-9, ...n.access_impact.map((a) => a.pop_lose_network ?? 0));
+  const bar = (v: number | null | undefined, max: number) => (
+    <span className="inline-bar inline-bar--evidence" aria-hidden="true">
+      <span className="inline-bar__fill" style={{ width: `${(100 * (v ?? 0)) / max}%` }} />
+    </span>
+  );
   return (
-    <div className="grid">
-      <div className="span-12">
+    <div className="stack">
+      <div>
         <Panel id="acc" cls="panel--evidence" title="Access-tag classification" tags={<Role k="analysis" />} sub="How mapped access tags would classify ways and gate nodes for pedestrians. Reported, not applied." codes={["DQ-ANALYSIS-ONLY"]}>
           <div className="table-wrap">
             <table className="data-table data-table--compact">
@@ -380,6 +433,7 @@ function access(n: Network, analysisText: string | undefined) {
                     <td>{underscores(a.public_pedestrian_status)}</td>
                     <td className="n">
                       <Num v={a.km} d={2} />
+                      {bar(a.km, kmMax)}
                     </td>
                     <td className="n">
                       <Num v={a.km_main} d={2} />
@@ -395,7 +449,7 @@ function access(n: Network, analysisText: string | undefined) {
           </div>
         </Panel>
       </div>
-      <div className="span-12">
+      <div>
         <Panel id="imp" cls="panel--evidence" title="What-if access impact" tags={<Role k="analysis" />} sub="What would change if each tag rule were applied to the network. None of these is applied to the network or to any indicator." codes={["DQ-ANALYSIS-ONLY"]}>
           <div className="table-wrap">
             <table className="data-table data-table--compact">
@@ -432,6 +486,7 @@ function access(n: Network, analysisText: string | undefined) {
                     </td>
                     <td className="n">
                       <Num v={a.pop_lose_network} d={1} />
+                      {bar(a.pop_lose_network, loseMax)}
                     </td>
                     <td className="n">
                       <Num v={a.pop_become_local} d={1} />
@@ -493,7 +548,21 @@ function FragmentMap({ bundle, n, bboxText }: { bundle: LoadedBundle; n: Network
   }
   return (
     <>
-      <div style={{ marginBottom: "var(--space-2)" }}>
+      <div className="map-toolbar">
+        <div className="legend-inline">
+          <span className="legend-inline__item">
+            <span className="lg-line lg-line--frag" aria-hidden="true" />
+            Mapped fragment geometry
+          </span>
+          <span className="legend-inline__item">
+            <span className="lg-line lg-line--gap" aria-hidden="true" />
+            Gap line to main
+          </span>
+          <span className="legend-inline__item">
+            <span className="lg-box" aria-hidden="true" />
+            Bounding box only
+          </span>
+        </div>
         <Check id="nb-bbox" checked={showBox} onChange={(on) => set({ bbox: on ? null : "0" })}>
           Show component bounding boxes (dashed, labelled “bounding box”)
         </Check>
@@ -519,67 +588,70 @@ export function NetworkPage({ bundle }: { bundle: LoadedBundle }) {
   const n = bundle.network.data;
   const analysis = statement("DQ-ANALYSIS-ONLY")?.text;
   return (
-    <div className="page">
+    <div className="page page--research">
       <PageHeader eyebrow="For researchers · walk network evidence" title="Network connectivity" lead="How the walk network is split into components, and why some residents have no citywide time. Nothing on this page changes an indicator." />
       <div className="evidence-band" role="note">
         <strong>Evidence only.</strong> <Role k="evidence" /> <Role k="analysis" />
         <span>This page documents the network behind A3. A2, access tags and what-if scenarios appear only here and are never applied.</span>
       </div>
-      {guard("The network summary", () => {
-        const main = n.components.find((c) => c.fragment === "main");
-        const mapped = new Set(n.fragment_geometries.features.filter((f) => f.properties.geometry_kind !== "gap_line").map((f) => f.properties.fragment));
-        return (
-          <StatStrip
-            items={[
-              [n.components.length, `walk-network components: ${main ? `1 main + ${n.components.length - 1} fragments` : "no main component listed"}`],
-              [main ? fixed(main.length_km, 1) : "—", "km in the main network"],
-              [mapped.size, "fragments with real line geometry"],
-              [n.gap_evidence.length, `with gap evidence: ${n.gap_evidence.map((g) => g.fragment).join(", ")}`],
-            ]}
-          />
-        );
-      })}
-      <div className="grid">
-        <div className="span-12">{guard("The approach comparison", () => approaches(n, bundle.city.population.total))}</div>
-      </div>
-      <div className="grid">
-        <div className="span-7">{guard("The A1 → A3 transition", () => transition(n))}</div>
-        <div className="span-5">{guard("The component classes", () => classes(n))}</div>
-      </div>
-      <div className="grid">
-        <div className="span-12">
+      <PageToc
+        items={[
+          ["n-summary", "Summary"],
+          ["n-approaches", "Approaches"],
+          ["n-components", "Components"],
+          ["n-gaps", "Gap evidence"],
+          ["n-access", "Access tags"],
+        ]}
+      />
+      <PageSection id="n-summary" title="Summary">
+        {guard("The network summary", () => {
+          const main = n.components.find((c) => c.fragment === "main");
+          const mapped = new Set(n.fragment_geometries.features.filter((f) => f.properties.geometry_kind !== "gap_line").map((f) => f.properties.fragment));
+          return (
+            <div className="metrics metrics--4">
+              <MetricTile value={n.components.length} label="Walk-network components" detail={main ? `1 main + ${n.components.length - 1} fragments` : "no main component listed"} />
+              <MetricTile value={main ? fixed(main.length_km, 1) : "—"} label="Main network" detail="km of walkable edges" />
+              <MetricTile value={mapped.size} label="Fragments with line geometry" detail="the rest as bounding boxes" />
+              <MetricTile value={n.gap_evidence.length} label="With gap evidence" detail={n.gap_evidence.map((g) => g.fragment).join(", ") || "none"} />
+            </div>
+          );
+        })}
+      </PageSection>
+      <PageSection id="n-approaches" title="Approaches" lead="How A1, A2 and A3 assign residents to connectivity categories, and where residents move between A1 and A3.">
+        {guard("The approach comparison", () => approaches(n, bundle.city.population.total))}
+        <div className="grid" style={{ marginTop: "var(--space-4)" }}>
+          <div className="span-7">{guard("The A1 → A3 transition", () => transition(n))}</div>
+          <div className="span-5">{guard("The component classes", () => classes(n))}</div>
+        </div>
+      </PageSection>
+      <PageSection id="n-components" title="Components">
+        <div className="stack">
           {guard("The fragment map", () => {
             // read here, so a missing part is reported by guard() instead of failing the page
             void n.components.length;
             void n.fragment_geometries.features.length;
             return (
-              <Panel id="nmap" cls="panel--evidence" title="Fragments and gaps" tags={<Role k="evidence" />} sub="Purple: the mapped fragment geometries. Red dotted: gap lines to the main network. Dashed boxes: bounding boxes of the other components, not their geometry. The main network's geometry is not in the bundle." codes={["DQ-BBOX"]}>
+              <Panel id="nmap" cls="panel--evidence" title="Fragments and gaps" tags={<Role k="evidence" />} sub="Bounding boxes show where the other components are, not their geometry. The main network's geometry is not in the bundle." codes={["DQ-BBOX"]}>
                 <FragmentMap bundle={bundle} n={n} bboxText={statement("DQ-BBOX")?.text} />
               </Panel>
             );
           })}
-        </div>
-      </div>
-      <div className="grid">
-        <div className="span-12">
           {guard("The component table", () => {
             void n.components.length; // see above
             return (
-              <Panel id="comp" cls="panel--evidence" title={`All ${n.components.length} components`} tags={<Role k="evidence" />}>
+              <Panel id="comp" cls="panel--evidence" title={`All ${n.components.length} components`} tags={<Role k="evidence" />} sub="Sort by any column.">
                 <ComponentTable n={n} />
               </Panel>
             );
           })}
         </div>
-      </div>
-      <SectionBand title="Gap evidence" kind="evidence" tags={<Role k="evidence" />}>
-        Fragments that look connected in OSM topology but only through access-restricted corridors. Physical connection, mapped access, public pedestrian status and authorised group are separate facts.
-      </SectionBand>
-      {guard("The gap evidence", () => gapCards(n, analysis))}
-      <SectionBand title="Access tags" kind="evidence" tags={<Role k="analysis" />}>
-        Classification and what-if scenarios, stamped on every record.
-      </SectionBand>
-      {guard("The access-tag analysis", () => access(n, analysis))}
+      </PageSection>
+      <PageSection id="n-gaps" title="Gap evidence" kind="evidence" tags={<Role k="evidence" />} lead="Fragments that look connected in OSM topology but only through access-restricted corridors. Physical connection, mapped access, public pedestrian status and authorised group are separate facts.">
+        {guard("The gap evidence", () => gapCards(n, analysis))}
+      </PageSection>
+      <PageSection id="n-access" title="Access tags" kind="evidence" tags={<Role k="analysis" />} lead="Classification and what-if scenarios, stamped on every record.">
+        {guard("The access-tag analysis", () => access(n, analysis))}
+      </PageSection>
     </div>
   );
 }

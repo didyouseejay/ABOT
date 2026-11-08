@@ -855,6 +855,65 @@ uv run pytest           # offline unit tests
 Newest entries first. Each entry records the date, the milestone, what changed and why, files
 affected, and any effect on results. Future work is appended here as it is done.
 
+### 2026-11-08 — Dashboard redesign of the researcher pages: Methodology, Data quality, Network connectivity (uncommitted)
+
+**Why:** a pre-deployment review found three problems.
+- The researcher pages were long stacks of equal-weight panels with no summary and no way to jump
+  within the page.
+- On Methodology, the 42-row indicator-definition table ran past the page edge (the Statements
+  column was cut off), and the labels of the scenario diagram overlapped.
+- On Network, the dense comparison tables gave no visual sense of scale.
+
+The redesign followed the ui-ux-pro-max recommendations (civic-blue soft UI, WCAG AA, subtle
+motion) and kept the existing tokens and Atkinson Hyperlegible. No Tailwind or component library was
+added.
+
+**Added:**
+- `dashboard/src/components/ui.tsx`:
+  - `PageToc`: "On this page" navigation, sticky under the top bar. It uses buttons that scroll to
+    and focus the section, because the hash is the route.
+  - `PageSection`: anchored, titled sections.
+  - `MetricTile`: headline figures.
+  - `PropBar`: a proportional bar whose parts are also given in its accessible label.
+- `dashboard/src/styles/research.css`, imported last from `global.css`.
+
+**Changed:**
+- `dashboard/src/pages/MethodsPage.tsx`:
+  - six overview tiles (barangays, residents, cells, facilities, walking speed, walk limits);
+  - the five method steps as an icon flow;
+  - the scenario diagram split into three cards (connected, isolated fragment, unconnected), each
+    stating the A3 and A1 treatment in HTML text;
+  - indicator definitions grouped by id family (A3 walking, A1 walking, driving, driving
+    sensitivity, population by A3/A1 category) in collapsible groups, with a fixed-layout table
+    that wraps instead of overflowing;
+  - limitations as numbered cards, documents with the title above the path (this fixes the 320 px
+    overprint listed on 2026-11-03), and a Copy button for the citation.
+- `dashboard/src/pages/QualityPage.tsx`:
+  - a four-tile scorecard: audit pass/total with a pass/warn/fail/info bar, file integrity, source
+    validation confirmed/total, and ranking eligibility eligible/total with a bar;
+  - the panels grouped into Summary, Checks, Files, Reliability and inventory, and Statements and
+    QA;
+  - known issues as full-width callout cards, and statements as a card grid.
+- `dashboard/src/pages/NetworkPage.tsx`:
+  - summary tiles;
+  - the approach comparison gets a "Not network-connected" column. It shows the sum of the locally
+    connected, access-uncertain and unconnected residents, with a bar split by category and scaled
+    to the largest approach;
+  - the A1 → A3 matrix is shaded on a log scale (absent pairs stay hatched);
+  - the fragment map gets an HTML legend;
+  - gap cards show key figures (gap in walk cache, mapped link length, gates on the corridor), with
+    the OSM way list collapsed under a disclosure;
+  - access-tag km and what-if "residents would lose network" get inline bars.
+
+All values still come from the bundle, and no text asserted by the tests was changed.
+
+**Verified:**
+- Typecheck passes, Vitest 87 passed, and the build succeeds.
+- Headless screenshots at 1440 px. Narrow widths were checked only as far as headless Edge allows
+  (its minimum window is about 500 px), so 320–414 px still needs a manual check before deployment.
+
+**Effect on results:** none (presentation only).
+
 ### 2026-11-03 — Dashboard layout fix: content overflowing cards on Network and Data quality (uncommitted)
 
 **Why:** a viewing audit of the production build covered all eight pages at eight widths

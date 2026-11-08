@@ -4,7 +4,7 @@
  * pipeline QA checks. A skipped audit is never shown as passed.
  */
 import { guard, Unavailable } from "../components/states/States.tsx";
-import { Badge, PageHeader, Panel, Rel } from "../components/ui.tsx";
+import { Badge, MetricTile, PageHeader, PageSection, PageToc, Panel, PropBar, Rel } from "../components/ui.tsx";
 import type { LoadedBundle } from "../data/loadBundle.ts";
 import { fixed, formatUtc } from "../model/format.ts";
 import { auditView } from "../model/quality.ts";
@@ -35,20 +35,33 @@ function audit(b: LoadedBundle) {
       }
     >
       {c && (
-        <div className="counts" style={{ marginBottom: "var(--space-4)" }}>
-          {(
-            [
-              [c.pass, "✓ pass", "ok"],
-              [c.warn, "! warn", "warn"],
-              [c.fail, "✕ fail", c.fail > 0 ? "error" : "unknown"],
-              [c.info, "i info", "info"],
-            ] as const
-          ).map(([n, l, t]) => (
-            <div key={l} className={`count-box badge--${t}`} style={{ borderRadius: "var(--radius-sm)" }}>
-              <b>{n}</b>
-              <span>{l}</span>
-            </div>
-          ))}
+        <div className="audit-counts">
+          <div className="counts">
+            {(
+              [
+                [c.pass, "✓", "pass", "ok"],
+                [c.warn, "!", "warn", "warn"],
+                [c.fail, "✕", "fail", c.fail > 0 ? "error" : "unknown"],
+                [c.info, "i", "info", "info"],
+              ] as const
+            ).map(([n, sym, l, t]) => (
+              <div key={l} className={`count-box count-box--${t}`}>
+                <b>{n}</b>
+                <span>
+                  <span aria-hidden="true">{sym}</span> {l}
+                </span>
+              </div>
+            ))}
+          </div>
+          <PropBar
+            label="Audit checks in the panel"
+            parts={[
+              { key: "pass", n: c.pass, cls: "propbar__seg--ok", text: "passed" },
+              { key: "warn", n: c.warn, cls: "propbar__seg--warn", text: "warnings" },
+              { key: "fail", n: c.fail, cls: "propbar__seg--error", text: "failed" },
+              { key: "info", n: c.info, cls: "propbar__seg--info", text: "informational" },
+            ]}
+          />
         </div>
       )}
       {au.findings.length > 0 && (
@@ -96,18 +109,17 @@ function known(b: LoadedBundle) {
       {b.manifest.known_issues.length === 0 ? (
         <p className="small muted">The bundle lists no known issues.</p>
       ) : (
-        <ul className="statement-list">
+        <ul className="issue-list">
           {b.manifest.known_issues.map((k) => (
-            <li key={k.code} style={{ gridTemplateColumns: "minmax(0,1fr)" }}>
-              <span>
-                <Badge tone="warn">{k.code}</Badge>
-              </span>
-              <span>
-                {k.text}
-                <span className="small muted" style={{ display: "block" }}>
-                  affects: {k.affects.join(", ")}
-                </span>
-              </span>
+            <li key={k.code} className="issue">
+              <Badge tone="warn">{k.code}</Badge>
+              <p className="issue__text">{k.text}</p>
+              <p className="issue__affects">
+                <span className="muted">Affects</span>{" "}
+                {k.affects.map((a) => (
+                  <code key={a}>{a}</code>
+                ))}
+              </p>
             </li>
           ))}
         </ul>
@@ -116,11 +128,11 @@ function known(b: LoadedBundle) {
   );
 }
 
-function validation(b: LoadedBundle) {
+// null = the check was not performed (no reference material): shown as such, never as passed or failed
+function validationItems(b: LoadedBundle): [string, boolean | null][] {
   const v = b.manifest.data_quality.source_validation;
   const cc = v.component_classes_check;
-  // null = the check was not performed (no reference material): shown as such, never as passed or failed
-  const items: [string, boolean | null][] = [
+  return [
     ["A1 reproduces the baseline", v.a1_reproduces_baseline],
     ["Baseline outputs unchanged", v.baseline_outputs_unchanged],
     ["Baseline hashes match the files on disk", v.baseline_hashes_match_disk],
@@ -129,9 +141,14 @@ function validation(b: LoadedBundle) {
       cc.status === "not_performed" ? null : cc.identical,
     ],
   ];
+}
+
+function validation(b: LoadedBundle) {
+  const cc = b.manifest.data_quality.source_validation.component_classes_check;
+  const items = validationItems(b);
   return (
     <Panel id="val" title="Source validation">
-      <ul className="rel-list">
+      <ul className="rel-list check-list">
         {items.map(([l, ok]) => (
           <li key={l} style={{ gridTemplateColumns: "minmax(0,1fr) auto" }}>
             <span>{l}</span>
@@ -326,14 +343,12 @@ function reliability(b: LoadedBundle) {
 function statements(b: LoadedBundle) {
   return (
     <Panel id="stm" title={`The ${b.manifest.statements.length} statements`} sub={<>Texts come from <code>manifest.statements</code> at runtime and are shown verbatim wherever their code appears.</>}>
-      <ul className="statement-list">
+      <ul className="stmt-grid">
         {b.manifest.statements.map((s) => (
-          <li key={s.code}>
-            <span>
-              <code>{s.code}</code>
-            </span>
-            <span>{s.text}</span>
-            <span className="small muted">{s.applies_to}</span>
+          <li key={s.code} className="stmt">
+            <code className="stmt__code">{s.code}</code>
+            <p className="stmt__text">{s.text}</p>
+            <p className="stmt__applies">{s.applies_to}</p>
           </li>
         ))}
       </ul>
@@ -438,6 +453,49 @@ function inventory(b: LoadedBundle) {
   );
 }
 
+function Scorecard({ b }: { b: LoadedBundle }) {
+  const au = b.manifest.data_quality.source_validation.audit;
+  const a = auditView(au);
+  const [tone, text] = AUDIT_BADGE[a.state];
+  const c = au.counts;
+  const verified = b.verification === "verified";
+  const items = validationItems(b);
+  const yes = items.filter(([, ok]) => ok === true).length;
+  const vTone = items.some(([, ok]) => ok === false) ? "error" : items.some(([, ok]) => ok === null) ? "warn" : "ok";
+  const list = barangaysOf(b);
+  const nElig = list ? list.filter((x) => x.rec.data_quality.ranking_eligible).length : null;
+  return (
+    <div className="metrics metrics--4 scorecard">
+      <MetricTile tone={tone} label="Source audit" badge={<Badge tone={tone}>{text}</Badge>} value={c ? `${c.pass} / ${c.pass + c.warn + c.fail + c.info}` : "—"} detail={c ? `checks passed · ${c.warn} warn · ${c.fail} fail · ${c.info} info` : (au.reason ?? "No counts in the bundle")}>
+        {c && (
+          <PropBar
+            label="Audit checks"
+            parts={[
+              { key: "pass", n: c.pass, cls: "propbar__seg--ok", text: "passed" },
+              { key: "warn", n: c.warn, cls: "propbar__seg--warn", text: "warnings" },
+              { key: "fail", n: c.fail, cls: "propbar__seg--error", text: "failed" },
+              { key: "info", n: c.info, cls: "propbar__seg--info", text: "informational" },
+            ]}
+          />
+        )}
+      </MetricTile>
+      <MetricTile tone={verified ? "ok" : "warn"} label="File integrity" badge={verified ? <Badge tone="ok">Verified</Badge> : <Badge tone="warn">Not verified</Badge>} value={`${b.manifest.files.length}`} detail={verified ? "data files match the manifest (size + SHA-256)" : "data files size-checked; hashes not computed"} />
+      <MetricTile tone={vTone} label="Source validation" value={`${yes} / ${items.length}`} detail={vTone === "ok" ? "checks confirmed" : "checks confirmed; see Checks below"} />
+      <MetricTile tone="info" label="Ranking eligibility" value={nElig === null || !list ? "—" : `${nElig} / ${list.length}`} detail="barangays reliable enough to rank">
+        {list && nElig !== null && (
+          <PropBar
+            label="Barangays"
+            parts={[
+              { key: "e", n: nElig, cls: "propbar__seg--brand", text: "eligible" },
+              { key: "n", n: list.length - nElig, cls: "propbar__seg--muted", text: "not ranked" },
+            ]}
+          />
+        )}
+      </MetricTile>
+    </div>
+  );
+}
+
 export function QualityPage({ bundle }: { bundle: LoadedBundle }) {
   const a = auditView(bundle.manifest.data_quality.source_validation.audit);
   const lead =
@@ -447,40 +505,47 @@ export function QualityPage({ bundle }: { bundle: LoadedBundle }) {
         ? `What was checked, what passed, and what needs review. The audit passed with warnings; ${bundle.manifest.data_quality.source_validation.audit.counts?.fail ? "some checks failed" : "no check failed"}.`
         : "What was checked, what passed, and what needs review. The audit was not run for this bundle.";
   return (
-    <div className="page">
+    <div className="page page--research">
       <PageHeader eyebrow="For researchers" title="Data quality" lead={lead} />
-      <div className="grid">
-        <div className="span-12">{guard("The dataset status", () => status(bundle))}</div>
-      </div>
-      <div className="grid">
-        <div className="span-8">{guard("The audit result", () => audit(bundle))}</div>
-        <div className="span-4">
-          {guard("The known issues", () => known(bundle))}
-          <div style={{ height: "var(--space-4)" }} />
-          {guard("The source validation", () => validation(bundle))}
+      <PageToc
+        items={[
+          ["q-summary", "Summary"],
+          ["q-checks", "Checks"],
+          ["q-files", "Files"],
+          ["q-coverage", "Reliability & inventory"],
+          ["q-reference", "Statements & QA"],
+        ]}
+      />
+      <PageSection id="q-summary" title="Summary">
+        {guard("The quality summary", () => <Scorecard b={bundle} />)}
+        {guard("The dataset status", () => status(bundle))}
+      </PageSection>
+      <PageSection id="q-checks" title="Checks" lead="The source audit, the comparison with the baseline pipeline, and the issues the bundle declares.">
+        <div className="grid">
+          <div className="span-8">{guard("The audit result", () => audit(bundle))}</div>
+          <div className="span-4">{guard("The source validation", () => validation(bundle))}</div>
         </div>
-      </div>
-      <div className="grid">
-        <div className="span-12">{guard("The integrity table", () => integrity(bundle))}</div>
-      </div>
-      <div className="grid">
-        <div className="span-12">{guard("The reliability overview", () => reliability(bundle))}</div>
-      </div>
-      <div className="grid">
-        <div className="span-12">{guard("The facility inventory", () => inventory(bundle))}</div>
-      </div>
-      <div className="grid">
-        <div className="span-12">{guard("The statements", () => statements(bundle))}</div>
-      </div>
-      <div className="grid">
-        <div className="span-12">
+        {guard("The known issues", () => known(bundle))}
+      </PageSection>
+      <PageSection id="q-files" title="Files">
+        {guard("The integrity table", () => integrity(bundle))}
+      </PageSection>
+      <PageSection id="q-coverage" title="Reliability and facility inventory">
+        <div className="stack">
+          {guard("The reliability overview", () => reliability(bundle))}
+          {guard("The facility inventory", () => inventory(bundle))}
+        </div>
+      </PageSection>
+      <PageSection id="q-reference" title="Statements and pipeline QA">
+        <div className="stack">
+          {guard("The statements", () => statements(bundle))}
           {guard("The QA checks", () => {
             // read here, so a missing part is reported by guard() instead of failing the page
             if (bundle.provenance.status === "ok") void Object.keys(bundle.provenance.data.qa);
             return <QaPanel b={bundle} />;
           })}
         </div>
-      </div>
+      </PageSection>
     </div>
   );
 }
