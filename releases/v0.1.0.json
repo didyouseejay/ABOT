@@ -1,0 +1,195 @@
+{
+  "schema": "abot-release-record",
+  "schema_version": 1,
+  "tag": "v0.1.0",
+  "packaged_from_commit": "4181ae3ca6a1399985fb1a7088aef0556e478747",
+  "dashboard": {
+    "contract": "abot-dashboard",
+    "contract_version": "1.1.0",
+    "generated_utc": "2026-11-02T01:39:00+00:00",
+    "config_sha256": "d41264973cce3519f31f817eeaf41588a35a10a103eea93c2295564dd3d376d1",
+    "manifest_sha256": "a9c4dacd10b3a00b531b74d50fc7909e132943112ee6bc206e296e9862d65240",
+    "manifest_bytes": 177379
+  },
+  "source": {
+    "git_commit": "86d97976f98f4811bf6930c6af891763a9ca84db",
+    "git_working_tree_clean": true,
+    "git_dirty_count": 0,
+    "abot_version": "0.1.0"
+  },
+  "audit": {
+    "status": "obtained",
+    "outcome": "warn",
+    "counts": {
+      "pass": 58,
+      "warn": 3,
+      "fail": 0,
+      "info": 11
+    },
+    "ran_utc": "2026-11-02T01:38:58+00:00"
+  },
+  "osm": {
+    "osmnx_version": "2.1.1",
+    "overpass_endpoint": "https://overpass-api.de/api",
+    "boundary_buffer_m": 3000,
+    "responses": [
+      {
+        "label": "network_walk",
+        "cache_file": "osm_cache/547bf6791e753a4a79d0225b04fde9717d25d7c0.json",
+        "sha256": "9cdb03b1046919e71b8f0deb5008f9eb611c42090f79a967fb7568bb411b0d39",
+        "overpass_timestamp_osm_base": "2026-10-31T07:23:18Z",
+        "elements": 62049
+      },
+      {
+        "label": "network_drive",
+        "cache_file": "osm_cache/5b51ed1ede820a660cb8772a8155af23747d0283.json",
+        "sha256": "843c930994032ec8a0a85966cc3d92979db9bb1255f9fb28a761716e2c42b646",
+        "overpass_timestamp_osm_base": "2026-10-31T07:24:21Z",
+        "elements": 39605
+      },
+      {
+        "label": "barriers",
+        "cache_file": "osm_cache/5eb220f49c1c318aadbddf30941d49615dac354d.json",
+        "sha256": "3eeb9f0dff9f2456e60b4ba6f7500e5132358cf16e666b824596be3936b7ec19",
+        "overpass_timestamp_osm_base": "2026-10-31T07:26:22Z",
+        "elements": 18302
+      },
+      {
+        "label": "facilities",
+        "cache_file": "osm_cache/662e760ef5804510ab0ab9fbe4bbb65e583ca32c.json",
+        "sha256": "3335cb9004e7419e74f40e2b561c729a69eb25f8d5193d2eb64103e1fc8ce36b",
+        "overpass_timestamp_osm_base": "2026-10-31T07:27:27Z",
+        "elements": 4078
+      }
+    ],
+    "targeted_snapshot": {
+      "file": "osm_targeted/m04_gaps_20261031T131445Z.json",
+      "sha256": "12922cd2d2c891594cec1ba51e043d48734f4cb00f7f46cba4594bf4a5c7ba86",
+      "timestamp_osm_base": "2026-10-31T13:14:07Z",
+      "used_for": "evidence only"
+    }
+  },
+  "licences": {
+    "dataset": {
+      "id": "ODbL-1.0",
+      "url": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "file": "LICENSE-DATA.md"
+    },
+    "attribution": {
+      "file": "docs/ATTRIBUTION.md"
+    },
+    "code": {
+      "id": "MIT",
+      "file": "LICENSE",
+      "covers_dataset": false
+    }
+  },
+  "assets": [
+    {
+      "name": "abot-dashboard-v1-v0.1.0.zip",
+      "kind": "dashboard-bundle",
+      "bytes": 10196335,
+      "sha256": "7b871681a581040918b85fa89fdeefa2a6cc3bb7946cd48e4a2480b1b3af0e81",
+      "contents": [
+        {
+          "name": "ATTRIBUTION.md",
+          "bytes": 5675,
+          "sha256": "7d3b9645253f606bb578a038d4d5af315e9db4bd46d3c8af24d59042261954ef"
+        },
+        {
+          "name": "LICENSE-DATA.md",
+          "bytes": 2293,
+          "sha256": "7d32fa2017ef3ca9d7b38171c0d8c1c50a6b377fee3e917f44527709e3c57e64"
+        },
+        {
+          "name": "barangay_indicators.json",
+          "bytes": 1764764,
+          "sha256": "42b33a5e71633cb91e1ae2752c086c9cf75e990d0c2f718dab11da4987e5a9bc"
+        },
+        {
+          "name": "barangays.geojson",
+          "bytes": 183628,
+          "sha256": "6ae410b7725661ea0993cbc31716d989cb49f6f9aefa841a3c8524830317ef3c"
+        },
+        {
+          "name": "cells-001.geojson",
+          "bytes": 3469387,
+          "sha256": "3125a93a3ec23fa9373b6a04edcad4129884bcf537108aeb3992f97bbf46dd84"
+        },
+        {
+          "name": "cells-002.geojson",
+          "bytes": 3469569,
+          "sha256": "ac43b3f7b36eedb79f7a3bec092a45c5e56c58b6c1bfb8d63d671f0bdf01cb2a"
+        },
+        {
+          "name": "city.json",
+          "bytes": 107233,
+          "sha256": "ef63281c623f94e9cb3bf446b97fd800819e99ac30912ff6475b202a04290ca2"
+        },
+        {
+          "name": "facilities.geojson",
+          "bytes": 808676,
+          "sha256": "607846bc73ef5e8e6cb7b4b142fc75b55dfb2e067401e79494e108e2f5e68ad0"
+        },
+        {
+          "name": "manifest.json",
+          "bytes": 177379,
+          "sha256": "a9c4dacd10b3a00b531b74d50fc7909e132943112ee6bc206e296e9862d65240"
+        },
+        {
+          "name": "network.json",
+          "bytes": 171533,
+          "sha256": "fdf86cef25543817c97821444fabdedddb80b557c0b1fa967488b337eda4ff9c"
+        },
+        {
+          "name": "provenance.json",
+          "bytes": 34998,
+          "sha256": "bf8d45d88627f988f71e9ac5406d444d843d009232a745ad88c1dc91e0646f68"
+        }
+      ]
+    },
+    {
+      "name": "abot-osm-snapshot-v0.1.0.zip",
+      "kind": "osm-snapshot",
+      "bytes": 12410351,
+      "sha256": "34613fe476d3e03f8b0979dea90903429960b791b128c080500f63dc5cdf10de",
+      "contents": [
+        {
+          "name": "ATTRIBUTION.md",
+          "bytes": 5675,
+          "sha256": "7d3b9645253f606bb578a038d4d5af315e9db4bd46d3c8af24d59042261954ef"
+        },
+        {
+          "name": "LICENSE-DATA.md",
+          "bytes": 2293,
+          "sha256": "7d32fa2017ef3ca9d7b38171c0d8c1c50a6b377fee3e917f44527709e3c57e64"
+        },
+        {
+          "name": "osm_cache/547bf6791e753a4a79d0225b04fde9717d25d7c0.json",
+          "bytes": 6006027,
+          "sha256": "9cdb03b1046919e71b8f0deb5008f9eb611c42090f79a967fb7568bb411b0d39"
+        },
+        {
+          "name": "osm_cache/5b51ed1ede820a660cb8772a8155af23747d0283.json",
+          "bytes": 3899761,
+          "sha256": "843c930994032ec8a0a85966cc3d92979db9bb1255f9fb28a761716e2c42b646"
+        },
+        {
+          "name": "osm_cache/5eb220f49c1c318aadbddf30941d49615dac354d.json",
+          "bytes": 1622474,
+          "sha256": "3eeb9f0dff9f2456e60b4ba6f7500e5132358cf16e666b824596be3936b7ec19"
+        },
+        {
+          "name": "osm_cache/662e760ef5804510ab0ab9fbe4bbb65e583ca32c.json",
+          "bytes": 611148,
+          "sha256": "3335cb9004e7419e74f40e2b561c729a69eb25f8d5193d2eb64103e1fc8ce36b"
+        },
+        {
+          "name": "osm_targeted/m04_gaps_20261031T131445Z.json",
+          "bytes": 261835,
+          "sha256": "12922cd2d2c891594cec1ba51e043d48734f4cb00f7f46cba4594bf4a5c7ba86"
+        }
+      ]
+    }
+  ]
+}
