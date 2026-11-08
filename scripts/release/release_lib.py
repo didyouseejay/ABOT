@@ -167,7 +167,18 @@ def dirty_paths(repo: Path) -> list[str]:
     r = _git(repo, "status", "--porcelain=v1", "-z", "--untracked-files=all")
     if r.returncode != 0:
         raise ReleaseError(f"git status failed: {r.stderr.decode('utf-8', 'replace').strip()}")
-    return [e[3:] for e in r.stdout.decode("utf-8", "replace").split("\0") if len(e) > 3]
+    entries = [(e[:2], e[3:]) for e in r.stdout.decode("utf-8", "replace").split("\0") if len(e) > 3]
+    # `git status` flags a worktree file as modified when its size differs from the index, without
+    # comparing content: a CRLF checkout of an `eol=lf` file is reported even though it normalises
+    # to the committed blob. `git diff` compares the normalised content, so worktree-only changes
+    # (" M") are kept only if it confirms them.
+    if any(code == " M" for code, _ in entries):
+        d = _git(repo, "diff", "--name-only", "-z")
+        if d.returncode != 0:
+            raise ReleaseError(f"git diff failed: {d.stderr.decode('utf-8', 'replace').strip()}")
+        changed = {p for p in d.stdout.decode("utf-8", "replace").split("\0") if p}
+        entries = [(code, p) for code, p in entries if code != " M" or p in changed]
+    return [p for _, p in entries]
 
 
 def show_file(repo: Path, commit: str, path: str) -> bytes | None:

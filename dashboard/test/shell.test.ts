@@ -160,7 +160,8 @@ describe("bundle status on Data quality (read from the bundle, never hard-coded)
     const html = render("quality", s);
     expect(html).toContain("abot-dashboard 1.0.0");
     expect(html).toContain("2031-02-03 04:05 UTC");
-    expect(html).toContain("Verified (sizes and SHA-256)");
+    expect(html).toContain("Verified (sizes and checksums)");
+    expect(html).not.toContain("SHA-256");
     expect(html).toContain("Passed with warnings");
     expect(html).toContain("5ed16d2");
     expect(html).toContain("All datasets available");
@@ -180,8 +181,8 @@ describe("bundle status on Data quality (read from the bundle, never hard-coded)
   it("marks unverified integrity as a warning", async () => {
     const s = await ready(undefined, undefined, null);
     const items = s.status === "ready" ? bundleStatusItems(s.bundle) : [];
-    expect(items.find((i) => i.key === "integrity")).toMatchObject({ tone: "warn", value: "Not verified (SHA-256 unavailable; sizes checked)" });
-    expect(render("quality", s)).toContain("Not verified (SHA-256 unavailable; sizes checked)");
+    expect(items.find((i) => i.key === "integrity")).toMatchObject({ tone: "warn", value: "Not verified (checksums unavailable; sizes checked)" });
+    expect(render("quality", s)).toContain("Not verified (checksums unavailable; sizes checked)");
   });
   it("never shows a skipped audit as passed", async () => {
     const skip = { status: "not_run", ran_utc: null, implementation: "x", outcome: null, counts: null, findings: [], reason: "skipped" };

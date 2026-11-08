@@ -432,7 +432,7 @@ ${formatUtc(m.generated_utc)}, code ${commit}]. Independent project.`;
         </div>
       </PageSection>
 
-      <PageSection id="m-sources" title="Data sources" lead={prov ? `${prov.sources?.length ?? 0} raw sources, each with its licence and SHA-256.` : undefined}>
+      <PageSection id="m-sources" title="Data sources" lead={prov ? `${prov.sources?.length ?? 0} raw sources, each with its licence.` : undefined}>
         {prov ? (
           guard("The source list", () => (
             <div className="table-wrap">
@@ -445,7 +445,6 @@ ${formatUtc(m.generated_utc)}, code ${commit}]. Independent project.`;
                     <th scope="col" className="n">
                       Bytes
                     </th>
-                    <th scope="col">SHA-256</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -463,9 +462,6 @@ ${formatUtc(m.generated_utc)}, code ${commit}]. Independent project.`;
                       <td className="small">{s.licence ?? "—"}</td>
                       <td className="n">
                         <Int v={s.bytes} />
-                      </td>
-                      <td className="mono" style={{ fontSize: ".7rem" }} title={s.sha256 ?? ""}>
-                        {s.sha256 ? `${s.sha256.slice(0, 12)}…` : "—"}
                       </td>
                     </tr>
                   ))}

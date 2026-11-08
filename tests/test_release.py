@@ -290,7 +290,8 @@ def test_pack_writes_assets_record_and_checksums(tmp_path):
     osm_names = {c["name"] for c in rec["assets"][1]["contents"]}
     assert osm_names == {"osm_cache/aaaa.json", "osm_targeted/gaps.json", "LICENSE-DATA.md", "ATTRIBUTION.md"}
     sums = (r.out_dir / "SHA256SUMS").read_text(encoding="utf-8").splitlines()
-    assert sums == sorted(f"{a['sha256']}  {a['name']}" for a in rec["assets"])
+    # sorted by file name (as `sha256sums` documents), not by the hash that starts each line
+    assert sums == [f"{a['sha256']}  {a['name']}" for a in sorted(rec["assets"], key=lambda a: a["name"])]
     for a in rec["assets"]:
         assert R.sha256_file(r.out_dir / a["name"]) == a["sha256"]
     assert rec["licences"]["dataset"]["id"] == "ODbL-1.0"
@@ -334,8 +335,19 @@ def test_pack_reads_but_never_modifies_the_bundle(tmp_path):
 def test_licence_documents_come_from_git_not_the_working_tree(tmp_path):
     """A CRLF checkout (core.autocrlf on Windows) must not change the archive bytes."""
     repo = setup(tmp_path)
-    (repo / "LICENSE-DATA.md").write_bytes(b"# ABOT dataset licence\r\nODbL 1.0\r\n")
+    lic = repo / "LICENSE-DATA.md"
+    # Start from an LF checkout on every platform (write_text gives CRLF on Windows, which would make
+    # the rewrite below byte-identical and hide the case), with the index stat matching it.
+    lic.write_bytes(b"# ABOT dataset licence\nODbL 1.0\n")
+    git(repo, "add", "LICENSE-DATA.md")  # same blob; only the index stat changes
+    lic.write_bytes(b"# ABOT dataset licence\r\nODbL 1.0\r\n")
+    # The size now differs from the index, so `git status` reports the file as modified; only a
+    # content comparison after normalisation shows that nothing changed.
     assert R.dirty_paths(repo) == []  # same content after normalisation
+    # a real edit is still reported
+    (repo / "CHANGES.md").write_text("edited\n", encoding="utf-8")
+    assert R.dirty_paths(repo) == ["CHANGES.md"]
+    (repo / "CHANGES.md").write_text("later code change\n", encoding="utf-8")
     r = pack(repo)
     with zipfile.ZipFile(dash(r)) as zf:
         assert zf.read("LICENSE-DATA.md") == b"# ABOT dataset licence\nODbL 1.0\n"

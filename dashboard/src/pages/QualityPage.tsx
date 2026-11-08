@@ -173,7 +173,7 @@ function integrity(b: LoadedBundle) {
       id="integ"
       title="Integrity"
       tags={verified ? <Badge tone="ok">Verified</Badge> : <Badge tone="warn">Not verified</Badge>}
-      sub="Each file's size and SHA-256 are checked against the manifest before anything is shown. The manifest is the reference and is checked for parse and contract version only."
+      sub="Each file is checked against the manifest before anything is shown. The manifest is the reference and is checked for parse and contract version only."
     >
       <div className="table-wrap">
         <table className="data-table data-table--compact">
@@ -185,7 +185,6 @@ function integrity(b: LoadedBundle) {
               <th scope="col" className="n">
                 Bytes
               </th>
-              <th scope="col">SHA-256 (manifest)</th>
               <th scope="col">Status</th>
             </tr>
           </thead>
@@ -198,10 +197,7 @@ function integrity(b: LoadedBundle) {
                   <td className="mono">{f.name}</td>
                   <td>{f.dataset}</td>
                   <td className="n">{fixed(f.bytes, 0)}</td>
-                  <td className="mono" style={{ fontSize: ".68rem" }} title={f.sha256}>
-                    {f.sha256.slice(0, 16)}…
-                  </td>
-                  <td>{failed ? <Badge tone="error">Dataset failed</Badge> : verified ? <Badge tone="ok">Size + SHA-256 match</Badge> : <Badge tone="warn">Size OK · hash not computed</Badge>}</td>
+                  <td>{failed ? <Badge tone="error">Dataset failed</Badge> : verified ? <Badge tone="ok">Matches the manifest</Badge> : <Badge tone="warn">Size OK · not fully verified</Badge>}</td>
                 </tr>
               );
             })}
@@ -209,9 +205,6 @@ function integrity(b: LoadedBundle) {
               <td className="mono">manifest.json</td>
               <td>manifest</td>
               <td className="n">—</td>
-              <td className="mono" style={{ fontSize: ".68rem" }}>
-                reference file
-              </td>
               <td>
                 <Badge tone="info">{`Parsed · v${b.manifest.contract_version}`}</Badge>
               </td>
@@ -467,7 +460,7 @@ function Scorecard({ b }: { b: LoadedBundle }) {
           />
         )}
       </MetricTile>
-      <MetricTile tone={verified ? "ok" : "warn"} label="File integrity" badge={verified ? <Badge tone="ok">Verified</Badge> : <Badge tone="warn">Not verified</Badge>} value={`${b.manifest.files.length}`} detail={verified ? "data files match the manifest (size + SHA-256)" : "data files size-checked; hashes not computed"} />
+      <MetricTile tone={verified ? "ok" : "warn"} label="File integrity" badge={verified ? <Badge tone="ok">Verified</Badge> : <Badge tone="warn">Not verified</Badge>} value={`${b.manifest.files.length}`} detail={verified ? "data files match the manifest" : "data files size-checked only"} />
       <MetricTile tone={vTone} label="Source validation" value={`${yes} / ${items.length}`} detail={vTone === "ok" ? "checks confirmed" : "checks confirmed; see Checks below"} />
       <MetricTile tone="info" label="Ranking eligibility" value={nElig === null || !list ? "—" : `${nElig} / ${list.length}`} detail="barangays reliable enough to rank">
         {list && nElig !== null && (

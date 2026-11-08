@@ -61,11 +61,11 @@ export function bundleStatusItems(b: LoadedBundle): StatusItem[] {
     },
     { key: "generated", label: "Generated", value: formatUtc(m.generated_utc), tone: "info", detail: m.generated_utc },
     b.verification === "verified"
-      ? { key: "integrity", label: "Integrity", value: "Verified (sizes and SHA-256)", tone: "ok" }
+      ? { key: "integrity", label: "Integrity", value: "Verified (sizes and checksums)", tone: "ok" }
       : {
           key: "integrity",
           label: "Integrity",
-          value: "Not verified (SHA-256 unavailable; sizes checked)",
+          value: "Not verified (checksums unavailable; sizes checked)",
           tone: "warn",
           detail: "Web Crypto is not available in this context (it needs https or localhost).",
         },

@@ -855,6 +855,48 @@ uv run pytest           # offline unit tests
 Newest entries first. Each entry records the date, the milestone, what changed and why, files
 affected, and any effect on results. Future work is appended here as it is done.
 
+### 2026-11-08 — CI fix (two release tests) and SHA-256 hidden on the dashboard (uncommitted)
+
+**Why:** CI failed: 2 of 360 tests failed, 351 passed and 7 were skipped (analytical outputs not
+present). Separately, the dashboard showed SHA-256 hashes and wording that the author judged
+over-documented for a public site.
+
+**Fixed:**
+- **`test_pack_writes_assets_record_and_checksums`:** `pack_release.sha256sums()` writes
+  `SHA256SUMS` sorted by file name, as its docstring says. The test sorted the expected lines by the
+  whole line, which begins with the hash. It passed only when the hashes happened to sort in
+  name order, so CI hashes gave a different order. The test now sorts by name. The implementation
+  and the release format are unchanged.
+- **`test_licence_documents_come_from_git_not_the_working_tree`:** `release_lib.dirty_paths()`
+  used `git status --porcelain`. Git marks a file as modified when its size differs from the
+  index, without comparing content, so a CRLF rewrite of an `eol=lf` file was reported as dirty,
+  although it normalises to the committed blob. `dirty_paths()` now confirms worktree-only
+  modifications (` M`) with `git diff --name-only`, which compares normalised content. Staged,
+  deleted and untracked paths are reported as before. The test also hid the case on Windows:
+  `write_text` already writes CRLF there, so the "CRLF rewrite" was byte-identical. It now starts
+  from an LF checkout on every platform, and it checks that a real edit is still reported. Without
+  the fix it fails on Windows exactly as on CI (`['LICENSE-DATA.md'] == []`).
+
+**Changed (dashboard):**
+- **Methodology › Data sources:** the SHA-256 column was removed; the lead reads "each with its
+  licence."
+- **Data quality › Integrity:** the hash column and the SHA-256 wording were removed.
+  - Badges now read "Matches the manifest" or "Size OK · not fully verified".
+  - The status labels became "Verified (sizes and checksums)" and "Not verified (checksums
+    unavailable; sizes checked)".
+  - Updated `dashboard/test/shell.test.ts`, which also now asserts that Data quality shows no
+    "SHA-256".
+- The hashes stay in the manifest and in provenance and are still verified on load. Only the display
+  changed. A loader error naming SHA-256 can still appear if a file fails verification.
+
+**Verified:**
+- pytest: 360 passed locally.
+- ruff check, ruff format --check and pyright are clean.
+- Typecheck passes, Vitest 87 passed, and the build succeeds.
+- No rendered page contains "SHA-256".
+
+**Effect on results:** none.
+
 ### 2026-11-08 — Dashboard: blank space below the footer fixed; flat evidence styling; source retrieval times removed (uncommitted)
 
 **Why:** three problems were reported after the researcher-page redesign:
