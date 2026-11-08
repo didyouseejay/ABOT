@@ -432,7 +432,7 @@ ${formatUtc(m.generated_utc)}, code ${commit}]. Independent project.`;
         </div>
       </PageSection>
 
-      <PageSection id="m-sources" title="Data sources" lead={prov ? `${prov.sources?.length ?? 0} raw sources, each with its licence, retrieval time and SHA-256.` : undefined}>
+      <PageSection id="m-sources" title="Data sources" lead={prov ? `${prov.sources?.length ?? 0} raw sources, each with its licence and SHA-256.` : undefined}>
         {prov ? (
           guard("The source list", () => (
             <div className="table-wrap">
@@ -442,7 +442,6 @@ ${formatUtc(m.generated_utc)}, code ${commit}]. Independent project.`;
                   <tr>
                     <th scope="col">Source file</th>
                     <th scope="col">Licence</th>
-                    <th scope="col">Retrieved (UTC)</th>
                     <th scope="col" className="n">
                       Bytes
                     </th>
@@ -462,7 +461,6 @@ ${formatUtc(m.generated_utc)}, code ${commit}]. Independent project.`;
                         )}
                       </td>
                       <td className="small">{s.licence ?? "—"}</td>
-                      <td className="small num">{s.retrieved_utc ? formatUtc(s.retrieved_utc) : "—"}</td>
                       <td className="n">
                         <Int v={s.bytes} />
                       </td>

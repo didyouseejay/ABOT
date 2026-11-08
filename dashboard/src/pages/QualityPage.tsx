@@ -235,7 +235,8 @@ function reliability(b: LoadedBundle) {
   const overall = relCounts(list, "overall");
   const nElig = list.filter((x) => x.rec.data_quality.ranking_eligible).length;
   const svg = svgPaths(list, 420);
-  const fill: Record<string, string> = { ok: "url(#p-ok)", caution: "url(#p-caution)", low: "url(#p-low)" };
+  // flat fills; lightness rises with severity, and every level is named in the legend and tooltip
+  const fill: Record<string, string> = { ok: "#e2e8f0", caution: "#fca5a5", low: "#b91c1c" };
   const allUnverified = list.every((x) => relOf(x.rec, "facility_inventory").level === "unverified");
   return (
     <Panel id="rel" title="Reliability across barangays" sub={`Low reliability excludes a barangay from ranks (${overall.low} low → ${nElig} eligible).`} codes={["DQ-SIMPLIFIED", "DQ-POP-ALLOC"]}>
@@ -298,24 +299,11 @@ function reliability(b: LoadedBundle) {
           {svg && (
             <>
               <svg viewBox={`0 0 ${svg.w} ${svg.h}`} className="chart" role="img" aria-label={`Map of overall reliability by barangay: ${overall.ok} OK, ${overall.caution} caution, ${overall.low} low`} style={{ maxHeight: "20rem" }}>
-                <defs>
-                  <pattern id="p-ok" width="6" height="6" patternUnits="userSpaceOnUse">
-                    <rect width="6" height="6" fill="#e7f4ec" />
-                  </pattern>
-                  <pattern id="p-caution" width="5" height="5" patternUnits="userSpaceOnUse">
-                    <rect width="5" height="5" fill="#fff4dc" />
-                    <circle cx="2.5" cy="2.5" r="1" fill="#b8892c" />
-                  </pattern>
-                  <pattern id="p-low" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-                    <rect width="5" height="5" fill="#fdecee" />
-                    <line x1="0" y1="0" x2="0" y2="5" stroke="#a1121f" strokeWidth="1.6" />
-                  </pattern>
-                </defs>
                 {list.map((x) => {
                   const lvl = relOf(x.rec, "overall").level;
                   const d = svg.paths.get(x.code);
                   return d ? (
-                    <path key={x.code} d={d} fill={fill[lvl] ?? "#eef1f1"} stroke="#7d8789" strokeWidth="0.4">
+                    <path key={x.code} d={d} fill={fill[lvl] ?? "#f8fafc"} stroke="#ffffff" strokeWidth="0.6">
                       <title>{`${x.name}: overall ${lvl}`}</title>
                     </path>
                   ) : null;
@@ -323,13 +311,13 @@ function reliability(b: LoadedBundle) {
               </svg>
               <div className="legend-inline" style={{ marginTop: "var(--space-2)" }}>
                 <span className="legend-inline__item">
-                  <span className="legend__sw" style={{ background: "#e7f4ec" }} />✓ OK
+                  <span className="legend__sw" style={{ background: "#e2e8f0" }} />✓ OK
                 </span>
                 <span className="legend-inline__item">
-                  <span className="legend__sw" style={{ background: "radial-gradient(#b8892c 1px,#fff4dc 1.2px) 0 0/5px 5px" }} />! Caution (dots)
+                  <span className="legend__sw" style={{ background: "#fca5a5" }} />! Caution
                 </span>
                 <span className="legend-inline__item">
-                  <span className="legend__sw" style={{ background: "repeating-linear-gradient(45deg,#fdecee 0 2px,#a1121f 2px 3px)" }} />▼ Low (hatched)
+                  <span className="legend__sw" style={{ background: "#b91c1c" }} />▼ Low
                 </span>
               </div>
             </>

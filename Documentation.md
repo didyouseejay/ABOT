@@ -855,6 +855,51 @@ uv run pytest           # offline unit tests
 Newest entries first. Each entry records the date, the milestone, what changed and why, files
 affected, and any effect on results. Future work is appended here as it is done.
 
+### 2026-11-08 — Dashboard: blank space below the footer fixed; flat evidence styling; source retrieval times removed (uncommitted)
+
+**Why:** three problems were reported after the researcher-page redesign:
+- a large blank area below the footer on Data quality;
+- the striped beige and yellow-orange "evidence" styling looked busy;
+- the source retrieval (download) timestamps on Methodology felt over-documented.
+
+**Fixed:**
+- **Blank space:** each status badge carries an absolutely positioned screen-reader label
+  (`.visually-hidden`). Inside the height-capped Pipeline QA table, these labels escaped the
+  scroll box, because `.table-wrap` was not a positioned element. They stretched the page to the
+  table's full, unscrolled height (8,295 px against a footer ending at 5,641 px). `.table-wrap` now
+  has `position: relative`. The page now ends at the footer on Data quality (5,641 px), Network
+  (6,215 px) and Methodology (5,694 px). The bug predates the redesign; it also affected the
+  Network component table.
+
+**Changed:**
+- **Evidence styling** (tokens.css, app.css, research.css): the evidence and analysis surfaces are
+  flat slate (`--evidence-bg #f8fafc`, border `#cbd5e1`, ink `#334155`, accent `#64748b`). This
+  replaces beige diagonal stripes on:
+  - the evidence band, panel headers and evidence role tags;
+  - the gap-card headers and the section-heading bars.
+
+  The meaning is carried by the "Evidence only" and "Analysis only" text labels, a solid slate top
+  border on evidence panels, and dashed borders on analysis tags and stamps.
+- **Other amber decoration removed:**
+  - the coloured top lines on metric tiles;
+  - the amber borders on known-issue cards;
+  - the amber limitation codes;
+  - hatching in the proportional bars and in the matrix's absent cells. Absent cells are now plain
+    grey with the word "absent", and the caption now says "Cells marked “absent”".
+- **Reliability map** (Data quality): the dot and hatch patterns became flat fills that darken with
+  severity: OK `#e2e8f0`, Caution `#fca5a5`, Low `#b91c1c`. The legend keeps the ✓ ! ▼ symbols and
+  words, and each barangay keeps its tooltip.
+- **Methodology › Data sources:** the "Retrieved (UTC)" column was removed, and the lead now reads
+  "each with its licence and SHA-256". The retrieval times stay in `provenance.json` and the bundle;
+  they are only no longer displayed.
+
+**Verified:**
+- Typecheck passes and Vitest 87 passed.
+- Measured with headless Edge through the DevTools protocol, the page height equals the footer
+  bottom on all three pages.
+
+**Effect on results:** none (presentation only).
+
 ### 2026-11-08 — Dashboard redesign of the researcher pages: Methodology, Data quality, Network connectivity (uncommitted)
 
 **Why:** a pre-deployment review found three problems.

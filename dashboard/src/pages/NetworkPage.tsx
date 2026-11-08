@@ -150,7 +150,7 @@ function transition(n: Network) {
           .slice(0, 2)
           .map((x) => `${fixed(x.pop, 1)} residents ${x.a1_category === "network_connected" ? "connected" : "not connected"} under A1 are ${CATEGORIES.find((c) => c.id === x.a3_category)?.label.toLowerCase() ?? x.a3_category} under A3`)
           .join("; ")}
-        {cross.length ? ". " : ""}Darker cells hold more residents (log scale). Hatched cells are pairs absent from the bundle, not zeros.
+        {cross.length ? ". " : ""}Darker cells hold more residents (log scale). Cells marked “absent” are pairs absent from the bundle, not zeros.
       </p>
     </Panel>
   );

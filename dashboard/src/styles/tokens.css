@@ -161,7 +161,9 @@
   --fac-evacuation: #f0e442;
 
   /* Evidence-only and analysis-only surfaces */
-  --evidence-bg: #fbf8f1;
-  --evidence-stripe: #efe6cf;
-  --evidence-ink: #5c4a1e;
+  /* Flat slate (redesign 2026-11-08): no stripes; the "Evidence only" / "Analysis only" labels carry the meaning */
+  --evidence-bg: #f8fafc;
+  --evidence-stripe: #cbd5e1; /* border */
+  --evidence-ink: #334155;
+  --evidence-accent: #64748b;
 }
