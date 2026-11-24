@@ -855,7 +855,7 @@ uv run pytest           # offline unit tests
 Newest entries first. Each entry records the date, the milestone, what changed and why, files
 affected, and any effect on results. Future work is appended here as it is done.
 
-### 2026-11-24 — Dashboard: preparation and run dates removed; Documents panel removed; mobile map legend fix (uncommitted)
+### 2026-11-24 — Dashboard: preparation and run dates removed; Documents panel removed; mobile map legend as a side button (uncommitted)
 
 **Why:** the "Data prepared 2026-11-02" line and the other timestamps on the pages were not wanted.
 
@@ -877,6 +877,11 @@ affected, and any effect on results. Future work is appended here as it is done.
   panel's own z-index 700 could not lift it above them. `.mapview` now has `isolation: isolate`, so
   all map overlays stay below the panel (`site.css`). At 390 × 844 px, every sampled point of the
   open panel was the panel itself.
+- Map, phones and narrow screens (up to 64rem): the legend is now a small "Legend" side button at
+  the top left of the map. It starts closed and opens below itself with a close icon. Opening
+  Options closes the legend, and opening the legend closes Options, so they never overlap. The
+  desktop legend is unchanged (`MapPage.tsx`, `site.css`). Checked at 390 × 844 px: the closed
+  button is 95 × 46 px, the open legend is 232 × 316 px, and the Options button stays clickable.
 
 **Checks:** the typecheck passes and all 87 Vitest tests pass.
 

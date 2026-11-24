@@ -165,6 +165,9 @@ function Controls({ b, list, o, setLyr }: { b: LoadedBundle; list: Barangay[]; o
   );
 }
 
+/** Same breakpoint as the narrow map layout in site.css. */
+const NARROW = "(max-width: 64rem)";
+
 function Legend({ o, nFacs, collapsed, onToggle }: { o: Opt; nFacs: number; collapsed: boolean; onToggle: () => void }) {
   const { s } = useView();
   const drive = s.m === "drive";
@@ -178,11 +181,12 @@ function Legend({ o, nFacs, collapsed, onToggle }: { o: Opt; nFacs: number; coll
   );
   return (
     <div className="map-legend" id="map-legend" role="region" aria-label="Legend" data-collapsed={String(collapsed)}>
-      <button type="button" className="map-legend__toggle" aria-expanded={!collapsed} onClick={onToggle}>
+      <button type="button" className="map-legend__toggle" aria-expanded={!collapsed} aria-controls="map-legend-body" onClick={onToggle}>
         <Glyph name="layers" />
         Legend
+        {!collapsed && <span className="map-legend__close" aria-hidden="true"><Glyph name="close" /></span>}
       </button>
-      <div className="map-legend__body">
+      <div className="map-legend__body" id="map-legend-body">
         {o.choro && (
           <div className="map-legend__block">
             <p className="map-legend__title">{statOf(s) === "pct" ? `Residents who can ${verbOf(s)} to ${servicePhrase(s.g)} within ${limitOf(s)} min` : `Typical ${verbOf(s)} to ${servicePhrase(s.g)}`}</p>
@@ -232,7 +236,8 @@ export function MapPage({ bundle }: { bundle: LoadedBundle }) {
   const live = useRef({ s, set });
   live.current = { s, set };
   const [basemap, setBasemap] = useBasemapChoice();
-  const [legendCollapsed, setLegendCollapsed] = useState(false);
+  // On phones and narrow screens the legend starts as a small button, so it does not cover the map.
+  const [legendCollapsed, setLegendCollapsed] = useState(() => typeof window !== "undefined" && !!window.matchMedia?.(NARROW).matches);
   const [ctlOpen, setCtlOpen] = useState(false);
   const facFeats = bundle.facilities.status === "ok" ? bundle.facilities.data.features : [];
   const visibleFacs = o.facs ? facFeats.filter((f) => (f.properties.destination_groups ?? []).includes(s.g) || (f.properties.indicator_groups ?? []).includes(s.g)) : [];
@@ -356,7 +361,11 @@ export function MapPage({ bundle }: { bundle: LoadedBundle }) {
               {serviceName(s.g)} · {s.m === "drive" ? "by car" : "walking"} · within {limitOf(s)} min
             </p>
           </div>
-          <button type="button" className="btn btn--sm mapside__toggle" id="ctl-toggle" aria-expanded={ctlOpen} aria-controls="map-ctl" onClick={() => setCtlOpen((c) => !c)}>
+          <button type="button" className="btn btn--sm mapside__toggle" id="ctl-toggle" aria-expanded={ctlOpen} aria-controls="map-ctl" onClick={() => {
+              // Only one of Options and Legend is open at a time on narrow screens.
+              if (!ctlOpen && window.matchMedia?.(NARROW).matches) setLegendCollapsed(true);
+              setCtlOpen((c) => !c);
+            }}>
             <Glyph name="sliders" />
             {ctlOpen ? "Done" : "Options"}
           </button>
@@ -366,7 +375,10 @@ export function MapPage({ bundle }: { bundle: LoadedBundle }) {
       <div className="mapview">
         <div id="leaflet" ref={el} role="region" aria-label="Map of Iloilo City. The Barangays page lists the same figures." />
         <BasemapSwitcher id="bm" value={basemap} onChange={setBasemap} />
-        <Legend o={o} nFacs={visibleFacs.length} collapsed={legendCollapsed} onToggle={() => setLegendCollapsed((c) => !c)} />
+        <Legend o={o} nFacs={visibleFacs.length} collapsed={legendCollapsed} onToggle={() => {
+            if (legendCollapsed) setCtlOpen(false);
+            setLegendCollapsed((c) => !c);
+          }} />
         {selected && (
           <aside
             className="drawer"
