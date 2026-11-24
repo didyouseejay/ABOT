@@ -855,7 +855,7 @@ uv run pytest           # offline unit tests
 Newest entries first. Each entry records the date, the milestone, what changed and why, files
 affected, and any effect on results. Future work is appended here as it is done.
 
-### 2026-11-24 — Dashboard: preparation and run dates removed; Documents panel removed (uncommitted)
+### 2026-11-24 — Dashboard: preparation and run dates removed; Documents panel removed; mobile map legend fix (uncommitted)
 
 **Why:** the "Data prepared 2026-11-02" line and the other timestamps on the pages were not wanted.
 
@@ -872,6 +872,11 @@ affected, and any effect on results. Future work is appended here as it is done.
 - Methodology: the "Documents" panel was removed. It listed the repository documents beside the
   citation. Its `.doc-list` styles were deleted from `research.css`. The list stays in
   `provenance.json`.
+- Map, phones and narrow screens: the legend and the map/table switch were drawn over the open
+  Options panel. The panel has z-index 2. The overlays inside `.mapview` have z-index 500, and the
+  panel's own z-index 700 could not lift it above them. `.mapview` now has `isolation: isolate`, so
+  all map overlays stay below the panel (`site.css`). At 390 × 844 px, every sampled point of the
+  open panel was the panel itself.
 
 **Checks:** the typecheck passes and all 87 Vitest tests pass.
 
