@@ -6,7 +6,6 @@
 import type { BundleState } from "../data/BundleContext.tsx";
 import type { DatasetState, LoadedBundle } from "../data/loadBundle.ts";
 import type { DatasetKey } from "../routes.ts";
-import { formatUtc } from "./format.ts";
 import { type AuditState, type GitState, auditView, gitView } from "./quality.ts";
 
 export type Tone = "ok" | "warn" | "error" | "unknown" | "info";
@@ -59,7 +58,6 @@ export function bundleStatusItems(b: LoadedBundle): StatusItem[] {
       tone: b.compatibility.status === "compatible" ? "info" : "warn",
       ...(b.compatibility.status === "newer_minor" ? { detail: b.compatibility.message } : {}),
     },
-    { key: "generated", label: "Generated", value: formatUtc(m.generated_utc), tone: "info", detail: m.generated_utc },
     b.verification === "verified"
       ? { key: "integrity", label: "Integrity", value: "Verified (sizes and checksums)", tone: "ok" }
       : {

@@ -9,7 +9,7 @@ import { guard, Unavailable } from "../components/states/States.tsx";
 import { Int, MetricTile, PageHeader, PageSection, PageToc, Panel, Role, roleOf, Scen, type ScenKey } from "../components/ui.tsx";
 import type { CatalogEntry } from "../contract/types.ts";
 import type { LoadedBundle } from "../data/loadBundle.ts";
-import { fixed, formatUtc } from "../model/format.ts";
+import { fixed } from "../model/format.ts";
 import { PROJECT } from "../components/layout/Brand.tsx";
 
 const STEPS: [GlyphName, string, string][] = [
@@ -241,8 +241,8 @@ export function MethodsPage({ bundle }: { bundle: LoadedBundle }) {
   const commit = m.code.git_commit ? m.code.git_commit.slice(0, 7) : "unknown";
   const citation = `Coopera, C. J. L. (${m.generated_utc.slice(0, 4)}). ABOT: ${PROJECT.fullName}.
 Accessibility to essential public facilities in Iloilo City, Philippines
-[Dashboard, data contract ${m.contract} v${m.contract_version}, generated
-${formatUtc(m.generated_utc)}, code ${commit}]. Independent project.`;
+[Dashboard, data contract ${m.contract} v${m.contract_version},
+code ${commit}]. Independent project.`;
   return (
     <div className="page page--research">
       <PageHeader eyebrow="For researchers" title="Methodology" lead={`ABOT (“reach” in Hiligaynon and Filipino) estimates how long residents of Iloilo City take to reach essential public facilities on foot and by car, and reports the results for each of the city's ${nBrgy ?? ""} barangays.`} />
@@ -412,21 +412,6 @@ ${formatUtc(m.generated_utc)}, code ${commit}]. Independent project.`;
               <p className="small muted" style={{ margin: "var(--space-2) 0 0" }}>
                 OSM-derived data: © OpenStreetMap contributors; the dataset is available under the ODbL 1.0. Population: PSA 2020 census and WorldPop (CC BY 4.0).
               </p>
-            </Panel>
-            <Panel id="docs" title="Documents" sub="In the repository, beside the pipeline code.">
-              {prov
-                ? guard("The document list", () => (
-                    <ul className="doc-list">
-                      {prov.documents.map((d) => (
-                        <li key={d.path}>
-                          <Glyph name="book" />
-                          <span className="doc-list__t">{d.title}</span>
-                          <code className="doc-list__p">{d.path}</code>
-                        </li>
-                      ))}
-                    </ul>
-                  ))
-                : <Unavailable bundle={bundle} dataset="provenance" what="The document list" />}
             </Panel>
           </div>
         </div>

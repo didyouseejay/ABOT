@@ -153,20 +153,23 @@ describe("plain language on the public pages", () => {
 });
 
 describe("bundle status on Data quality (read from the bundle, never hard-coded)", () => {
-  it("shows version, generation time, integrity, audit, code and datasets from the bundle", async () => {
+  it("shows version, integrity, audit, code and datasets from the bundle", async () => {
     const s = await ready((d) => {
       for (const doc of ALL_DOCS(d)) doc["generated_utc"] = "2031-02-03T04:05:06+00:00";
     });
     const html = render("quality", s);
     expect(html).toContain("abot-dashboard 1.0.0");
-    expect(html).toContain("2031-02-03 04:05 UTC");
+    expect(html).not.toContain("2031-02-03");
     expect(html).toContain("Verified (sizes and checksums)");
     expect(html).not.toContain("SHA-256");
     expect(html).toContain("Passed with warnings");
     expect(html).toContain("5ed16d2");
     expect(html).toContain("All datasets available");
-    // the public pages show only the date the data was prepared
-    expect(render("overview", s)).toContain("Data prepared 2031-02-03");
+    // no preparation or download dates on any page
+    for (const p of ["overview", "about", "methods", "quality"] as const) {
+      expect(render(p, s)).not.toContain("2031-02-03");
+      expect(render(p, s)).not.toContain("Data prepared");
+    }
   });
   it("lists the known issues on Data quality, not on the public pages", async () => {
     const s = await ready();
@@ -176,7 +179,7 @@ describe("bundle status on Data quality (read from the bundle, never hard-coded)
   it("gives success tones only to verified, passed, clean states", async () => {
     const b = await bundle();
     const tone = Object.fromEntries(bundleStatusItems(b).map((i) => [i.key, i.tone]));
-    expect(tone).toEqual({ contract: "info", generated: "info", integrity: "ok", audit: "warn", git: "warn", datasets: "ok" });
+    expect(tone).toEqual({ contract: "info", integrity: "ok", audit: "warn", git: "warn", datasets: "ok" });
   });
   it("marks unverified integrity as a warning", async () => {
     const s = await ready(undefined, undefined, null);

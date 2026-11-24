@@ -116,12 +116,6 @@
 .limits { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
 .limits li { display: grid; grid-template-columns: 2.75rem minmax(0, 1fr); gap: var(--space-3); align-items: baseline; padding: var(--space-3); border-radius: var(--radius-sm); background: var(--color-surface-sunken); font-size: var(--font-size-sm); line-height: 1.5; }
 .limits__code { display: inline-grid; place-items: center; min-height: 1.5rem; border-radius: var(--radius-sm); background: var(--color-surface); border: 1px solid var(--color-border-strong); color: var(--color-ink); font-weight: var(--font-weight-bold); font-size: 0.72rem; }
-.doc-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
-.doc-list li { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 0 var(--space-2); padding: var(--space-2) 0; border-bottom: 1px solid var(--color-surface-sunken); }
-.doc-list li:last-child { border-bottom: 0; }
-.doc-list .glyph { width: 1rem; height: 1rem; color: var(--color-brand); margin-top: 0.2rem; grid-row: span 2; }
-.doc-list__t { font-size: var(--font-size-sm); font-weight: var(--font-weight-bold); }
-.doc-list__p { font-size: 0.7rem; color: var(--color-ink-muted); overflow-wrap: anywhere; }
 .citation-box { position: relative; }
 .citation-box .citation { padding-right: 5rem; }
 .citation-box__copy { position: absolute; top: var(--space-2); right: var(--space-2); }

@@ -855,6 +855,28 @@ uv run pytest           # offline unit tests
 Newest entries first. Each entry records the date, the milestone, what changed and why, files
 affected, and any effect on results. Future work is appended here as it is done.
 
+### 2026-11-24 — Dashboard: preparation and run dates removed; Documents panel removed (uncommitted)
+
+**Why:** the "Data prepared 2026-11-02" line and the other timestamps on the pages were not wanted.
+
+**Changed:**
+- Footer: "Data prepared YYYY-MM-DD ·" removed (`AppShell.tsx`; the footer no longer takes the bundle state).
+- About › Who made this: the "Data prepared …" date was removed. The line now gives only the resident count.
+- Data quality › Dataset status: the "Generated" row was removed (`model/shell.ts`).
+- Data quality › Audit result: the "ran <time>" stamp was removed.
+- Methodology › Cite this: the citation no longer includes the generation time. It keeps the year,
+  the contract version and the code commit.
+- The timestamps are still in the bundle (`manifest.json`, `provenance.json`) and are still checked
+  by the loader. Only the display was removed.
+- Tests (`test/shell.test.ts`): updated to check that no page shows the date or "Data prepared".
+- Methodology: the "Documents" panel was removed. It listed the repository documents beside the
+  citation. Its `.doc-list` styles were deleted from `research.css`. The list stays in
+  `provenance.json`.
+
+**Checks:** the typecheck passes and all 87 Vitest tests pass.
+
+**Effect on results:** none.
+
 ### 2026-11-08 — CI fix (two release tests) and SHA-256 hidden on the dashboard (uncommitted)
 
 **Why:** CI failed: 2 of 360 tests failed, 351 passed and 7 were skipped (analytical outputs not
@@ -1660,8 +1682,8 @@ and keeps all technical detail one link away for the thesis committee and other 
 - "For researchers", linked from About and the footer: Methodology (`#/methods`, the former
   About / Methodology page, unchanged in content), Data quality, Network connectivity.
 - The provenance bar is removed from every page. Its facts (bundle version, generation time,
-  integrity, audit, code version, datasets) are now a "Dataset status" panel on Data quality. The
-  public pages show only the date the data was prepared.
+  integrity, audit, code version, datasets) are now a "Dataset status" panel on Data quality.
+  (Since 2026-11-24 no page shows the generation or preparation date.)
 - The facility inventory table moves from Overview/Facilities to Data quality.
 - A notice appears on the public pages only when a dataset failed to load or the bundle is a newer
   minor version (`DataAlert.tsx`). Known issues stay on Data quality.

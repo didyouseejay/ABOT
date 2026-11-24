@@ -12,7 +12,6 @@ import { MethodsPage } from "../../pages/MethodsPage.tsx";
 import { NetworkPage } from "../../pages/NetworkPage.tsx";
 import { OverviewPage } from "../../pages/OverviewPage.tsx";
 import { QualityPage } from "../../pages/QualityPage.tsx";
-import { formatUtc } from "../../model/format.ts";
 import { ROUTES, routeDef } from "../../routes.ts";
 import { type View, ViewContext } from "../../view.tsx";
 import { NoteRegistry, NotesFooter, NotesProvider } from "../notes.tsx";
@@ -55,7 +54,7 @@ function Content({ route, state }: { route: string; state: BundleState }) {
   return <Page bundle={state.bundle} />;
 }
 
-function Footer({ view, state }: { view: View; state: BundleState }) {
+function Footer({ view }: { view: View }) {
   const research = ROUTES.filter((r) => r.reference);
   return (
     <footer className="footer">
@@ -80,7 +79,6 @@ function Footer({ view, state }: { view: View; state: BundleState }) {
           ))}
         </nav>
         <p className="footer__meta">
-          {state.status === "ready" && <>Data prepared {formatUtc(state.bundle.manifest.generated_utc).slice(0, 10)} · </>}
           Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors · Dataset: <a href={DATA_LICENCE.url}>{DATA_LICENCE.name}</a> (<a href={DATA_LICENCE.releases}>downloads</a>) · Code: MIT
         </p>
       </div>
@@ -106,7 +104,7 @@ export function AppShell({ view, state, navOpen, onToggleNav, onNavigate }: AppS
             <Content route={view.route} state={state} />
           </main>
           <NotesFooter />
-          {view.route !== "map" && <Footer view={view} state={state} />}
+          {view.route !== "map" && <Footer view={view} />}
         </div>
       </NotesProvider>
     </ViewContext.Provider>

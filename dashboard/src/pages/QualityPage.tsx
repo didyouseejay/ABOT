@@ -6,7 +6,7 @@
 import { guard, Unavailable } from "../components/states/States.tsx";
 import { Badge, MetricTile, PageHeader, PageSection, PageToc, Panel, PropBar, Rel } from "../components/ui.tsx";
 import type { LoadedBundle } from "../data/loadBundle.ts";
-import { fixed, formatUtc } from "../model/format.ts";
+import { fixed } from "../model/format.ts";
 import { auditView } from "../model/quality.ts";
 import { bundleStatusItems, datasetState } from "../model/shell.ts";
 import { InventoryTable } from "../components/InventoryTable.tsx";
@@ -29,7 +29,7 @@ function audit(b: LoadedBundle) {
       sub={
         <>
           <code>{au.implementation}</code>
-          {au.ran_utc ? ` · ran ${formatUtc(au.ran_utc)}` : ""} · status {au.status}
+          {" · "}status {au.status}
           {au.reason ? ` · ${au.reason}` : ""}
         </>
       }

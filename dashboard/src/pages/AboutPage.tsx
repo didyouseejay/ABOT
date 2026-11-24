@@ -6,7 +6,7 @@ import { Glyph, type GlyphName } from "../components/glyphs.tsx";
 import { DATA_LICENCE, PROJECT } from "../components/layout/Brand.tsx";
 import { PageHeader } from "../components/ui.tsx";
 import type { LoadedBundle } from "../data/loadBundle.ts";
-import { fixed, formatUtc } from "../model/format.ts";
+import { fixed } from "../model/format.ts";
 import { servicePlural } from "../model/labels.ts";
 import { useView } from "../view.tsx";
 
@@ -113,7 +113,7 @@ export function AboutPage({ bundle }: { bundle: LoadedBundle }) {
           {PROJECT.name} ({PROJECT.fullName}) is an independent personal portfolio project by {PROJECT.author}. It is not affiliated with or endorsed by any university, government agency or other institution. It is a read-only prototype: nothing you do here is saved or sent anywhere.
         </p>
         <p className="muted small">
-          Data prepared {formatUtc(m.generated_utc)} · {fixed(bundle.city.population.total, 0)} residents (2020 census)
+          {fixed(bundle.city.population.total, 0)} residents (2020 census)
         </p>
       </section>
       <section className="section" aria-labelledby="licence-h">
